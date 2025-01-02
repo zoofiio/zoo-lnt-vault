@@ -1,0 +1,59 @@
+{
+  "ZooProtocol": {
+    "address": "0x958F5165ad0b45b5DeaE5F51E9F8A4a52E4c6445",
+    "args": []
+  },
+  "ProtocolSettings": {
+    "address": "0xa2ad9Ce2E8F9B0107df65Fa0211D237CBaB0497a",
+    "args": [
+      "0x958F5165ad0b45b5DeaE5F51E9F8A4a52E4c6445",
+      "0xC73ce0c5e473E68058298D9163296BebAC2b729C"
+    ]
+  },
+  "NftStakingPoolFactory": {
+    "address": "0x6e08b209562B01FD5131E7dfDa8ffD8B221e74cE",
+    "args": [
+      "0x958F5165ad0b45b5DeaE5F51E9F8A4a52E4c6445"
+    ]
+  },
+  "YtRewardsPoolFactory": {
+    "address": "0xA8A655b94d30Ea4dfA8B68F26E426d720D9d7b81",
+    "args": [
+      "0x958F5165ad0b45b5DeaE5F51E9F8A4a52E4c6445"
+    ]
+  },
+  "VaultCalculator": {
+    "address": "0x734623E7A70b6273Fa4228Dcf525643256D100c0",
+    "args": []
+  },
+  "MockERC721": {
+    "address": "0xa6284206809734d3704B67948F634FF4bc898568",
+    "args": [
+      "0x958F5165ad0b45b5DeaE5F51E9F8A4a52E4c6445",
+      "Mock ERC721",
+      "MK721"
+    ]
+  },
+  "MockERC20": {
+    "address": "0xE531CE5660fF1e1B347744032D75377DE161C36D",
+    "args": [
+      "0x958F5165ad0b45b5DeaE5F51E9F8A4a52E4c6445",
+      "Mock ERC20",
+      "MK20",
+      18
+    ]
+  },
+  "MK721_Vault": {
+    "address": "0xd27aDCd2f312E68EF93fdbE9278530833ce3C837",
+    "args": [
+      "0x958F5165ad0b45b5DeaE5F51E9F8A4a52E4c6445",
+      "0xa2ad9Ce2E8F9B0107df65Fa0211D237CBaB0497a",
+      "0x6e08b209562B01FD5131E7dfDa8ffD8B221e74cE",
+      "0xA8A655b94d30Ea4dfA8B68F26E426d720D9d7b81",
+      "0xa6284206809734d3704B67948F634FF4bc898568",
+      "0xE531CE5660fF1e1B347744032D75377DE161C36D",
+      "Zoo vToken",
+      "VT"
+    ]
+  }
+}
