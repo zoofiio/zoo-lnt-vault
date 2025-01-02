@@ -3,7 +3,6 @@ pragma solidity ^0.8.18;
 
 // import "hardhat/console.sol";
 
-import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
@@ -158,109 +157,44 @@ contract Vault is IVault, ReentrancyGuard, ProtocolOwner {
 
   /* ========== MUTATIVE FUNCTIONS ========== */
 
+  function batchDepositNft(uint256[] calldata nftTokenIds) external nonReentrant onUserAction {
+    for (uint256 i = 0; i < nftTokenIds.length; i++) {
+      _depositNft(nftTokenIds[i]);
+    }
+  }
+
   function depositNft(uint256 nftTokenId) external nonReentrant onUserAction {
-    require(IERC721(nftToken).ownerOf(nftTokenId) == _msgSender(), "Not owner of NFT");
-    require(!_nftDeposits.contains(nftTokenId), "Already deposited");  // should not happen
-
-    IERC721(nftToken).transferFrom(_msgSender(), address(this), nftTokenId);
-    require(IERC721(nftToken).ownerOf(nftTokenId) == address(this), "NFT transfer failed");
-
-    _nftDeposits.add(nftTokenId);
-    _nftDepositInfo[nftTokenId] = Constants.NftDeposit({
-      owner: _msgSender(),
-      nftTokenId: nftTokenId,
-      depositTime: block.timestamp,
-      depositAtEpoch: _currentEpochId,
-      claimableTime: block.timestamp + paramValue("NftDepositLeadingTime") + 1,
-      claimed: false,
-      f1OnClaim: 0
-    });
-    emit NftDeposit(_currentEpochId, _msgSender(), nftTokenId);
+    _depositNft(nftTokenId);
   }
 
-  function claimDepositNft(uint256 nftTokenId) external nonReentrant onlyInitialized onlyDepositedNft(nftTokenId) onUserAction {
-    require(_nftDepositInfo[nftTokenId].owner == _msgSender(), "Not owner of NFT");
-    require(!_nftDepositInfo[nftTokenId].claimed, "Already claimed");
-    require(block.timestamp >= _nftDepositInfo[nftTokenId].claimableTime, "Not claimable yet");
-
-    uint256 leadingTimeEnd = _nftDepositInfo[nftTokenId].claimableTime;
-
-    uint256 remainingTime = 0;
-    if (leadingTimeEnd < nftVestingEndTime) {
-      remainingTime = nftVestingEndTime - leadingTimeEnd;
+  function batchClaimDepositNft(uint256[] calldata nftTokenIds) external nonReentrant onUserAction {
+    for (uint256 i = 0; i < nftTokenIds.length; i++) {
+      _claimDepositNft(nftTokenIds[i]);
     }
-
-    uint256 vtAmount = nftVtAmount.mulDiv(Math.min(nftVestingDuration, remainingTime), nftVestingDuration);
-    uint256 fees = vtAmount.mulDiv(paramValue("f1"), 10 ** IProtocolSettings(settings).decimals());
-    uint256 vtNetAmount = vtAmount - fees;
-    if (vtNetAmount > 0) {
-      IVToken(vToken).mint(_msgSender(), vtNetAmount);
-    }
-    if (fees > 0) {
-      IVToken(vToken).mint(IProtocolSettings(settings).treasury(), fees);
-    }
-    emit VTokenMinted(_msgSender(), nftTokenId, vtNetAmount, fees);
-
-    _nftDepositInfo[nftTokenId].f1OnClaim = paramValue("f1");
-    _nftDepositInfo[nftTokenId].claimed = true;
-    emit NftDepositClaimed(_currentEpochId, _msgSender(), nftTokenId);
-
-    _claimedNftDeposits.add(nftTokenId);
-
-    INftStakingPool(nftStakingPool).notifyNftDepositForUser(_msgSender(), nftTokenId);
   }
 
-  function redeemNft(uint256 nftTokenId) external nonReentrant onlyInitialized onlyDepositedNft(nftTokenId) onUserAction {
-    require(_nftDepositInfo[nftTokenId].owner == _msgSender(), "Not owner of NFT");
-    require(_nftDepositInfo[nftTokenId].claimed, "Not claimed deposit yet");
-    require(!_nftRedeems.contains(nftTokenId), "Already redeemed");
-
-    _nftRedeems.add(nftTokenId);
-    _nftRedeemInfo[nftTokenId] = Constants.NftRedeem({
-      owner: _msgSender(),
-      nftTokenId: nftTokenId,
-      redeemTime: block.timestamp,
-      redeemAtEpoch: _currentEpochId,
-      claimableTime: Math.max(
-        block.timestamp + paramValue( "NftRedeemWaitingPeriod") + 1,
-        _epochs[_currentEpochId].startTime + _epochs[_currentEpochId].duration + 1
-      ),
-      claimed: false
-    });
-    emit NftRedeem(_currentEpochId, _msgSender(), nftTokenId);
-
-    uint256 remainingTime = 0;
-    if (_nftRedeemInfo[nftTokenId].redeemTime < nftVestingEndTime) {
-      remainingTime = nftVestingEndTime - _nftRedeemInfo[nftTokenId].redeemTime;
-    }
-    uint256 vtAmount = nftVtAmount.mulDiv(Math.min(nftVestingDuration, remainingTime), nftVestingDuration);
-    uint256 fees = vtAmount.mulDiv(_nftDepositInfo[nftTokenId].f1OnClaim, 10 ** IProtocolSettings(settings).decimals());
-    uint256 vtBurnAmount = vtAmount - fees;
-    if (vtBurnAmount > 0) {
-      IVToken(vToken).burn(_msgSender(), vtBurnAmount);
-    }
-    emit VTokenBurned(_msgSender(), nftTokenId, vtBurnAmount);
-
-    INftStakingPool(nftStakingPool).notifyNftRedeemForUser(_msgSender(), nftTokenId);
+  function claimDepositNft(uint256 nftTokenId) external nonReentrant onUserAction {
+    _claimDepositNft(nftTokenId);
   }
 
-  function claimRedeemNft(uint256 nftTokenId) external nonReentrant onlyInitialized onlyRedeemedNft(nftTokenId) onUserAction {
-    require(_nftRedeemInfo[nftTokenId].owner == _msgSender(), "Not owner of NFT");
-    require(!_nftRedeemInfo[nftTokenId].claimed, "Already claimed");
-    require(block.timestamp >= _nftRedeemInfo[nftTokenId].claimableTime, "Not claimable yet");
+  function batchRedeemNft(uint256[] calldata nftTokenIds) external nonReentrant onUserAction {
+    for (uint256 i = 0; i < nftTokenIds.length; i++) {
+      _redeemNft(nftTokenIds[i]);
+    }
+  }
 
-    IERC721(nftToken).transferFrom(address(this), _msgSender(), nftTokenId);
+  function redeemNft(uint256 nftTokenId) external nonReentrant onUserAction {
+    _redeemNft(nftTokenId);
+  }
 
-    _nftRedeemInfo[nftTokenId].claimed = true;
+  function batchClaimRedeemNft(uint256[] calldata nftTokenIds) external nonReentrant onUserAction {
+    for (uint256 i = 0; i < nftTokenIds.length; i++) {
+      _claimRedeemNft(nftTokenIds[i]);
+    }
+  }
 
-    _nftDeposits.remove(nftTokenId);
-    delete _nftDepositInfo[nftTokenId];
-
-    _claimedNftDeposits.remove(nftTokenId);
-    _nftRedeems.remove(nftTokenId);
-    delete _nftRedeemInfo[nftTokenId];
-
-    emit NftRedeemClaimed(_currentEpochId, _msgSender(), nftTokenId);
+  function claimRedeemNft(uint256 nftTokenId) external nonReentrant onUserAction {
+    _claimRedeemNft(nftTokenId);
   }
 
   function swap(uint256 amount) external nonReentrant onlyInitialized noneZeroAmount(amount) onUserAction {
@@ -418,6 +352,111 @@ contract Vault is IVault, ReentrancyGuard, ProtocolOwner {
     (uint256 X, uint256 k0) = IVault(this).calcInitSwapParams(N, _epochs[_currentEpochId].ytSwapPaymentToken, _epochs[_currentEpochId].ytSwapPrice);
     _epochNextSwapX[_currentEpochId] = X;
     _epochNextSwapK0[_currentEpochId] = k0;
+  }
+
+  function _depositNft(uint256 nftTokenId) internal {
+    require(IERC721(nftToken).ownerOf(nftTokenId) == _msgSender(), "Not owner of NFT");
+    require(!_nftDeposits.contains(nftTokenId), "Already deposited");  // should not happen
+
+    IERC721(nftToken).transferFrom(_msgSender(), address(this), nftTokenId);
+    require(IERC721(nftToken).ownerOf(nftTokenId) == address(this), "NFT transfer failed");
+
+    _nftDeposits.add(nftTokenId);
+    _nftDepositInfo[nftTokenId] = Constants.NftDeposit({
+      owner: _msgSender(),
+      nftTokenId: nftTokenId,
+      depositTime: block.timestamp,
+      depositAtEpoch: _currentEpochId,
+      claimableTime: block.timestamp + paramValue("NftDepositLeadingTime") + 1,
+      claimed: false,
+      f1OnClaim: 0
+    });
+    emit NftDeposit(_currentEpochId, _msgSender(), nftTokenId);
+  }
+
+  function _claimDepositNft(uint256 nftTokenId) internal onlyInitialized onlyDepositedNft(nftTokenId) {
+    require(_nftDepositInfo[nftTokenId].owner == _msgSender(), "Not owner of NFT");
+    require(!_nftDepositInfo[nftTokenId].claimed, "Already claimed");
+    require(block.timestamp >= _nftDepositInfo[nftTokenId].claimableTime, "Not claimable yet");
+
+    uint256 leadingTimeEnd = _nftDepositInfo[nftTokenId].claimableTime;
+
+    uint256 remainingTime = 0;
+    if (leadingTimeEnd < nftVestingEndTime) {
+      remainingTime = nftVestingEndTime - leadingTimeEnd;
+    }
+
+    uint256 vtAmount = nftVtAmount.mulDiv(Math.min(nftVestingDuration, remainingTime), nftVestingDuration);
+    uint256 fees = vtAmount.mulDiv(paramValue("f1"), 10 ** IProtocolSettings(settings).decimals());
+    uint256 vtNetAmount = vtAmount - fees;
+    if (vtNetAmount > 0) {
+      IVToken(vToken).mint(_msgSender(), vtNetAmount);
+    }
+    if (fees > 0) {
+      IVToken(vToken).mint(IProtocolSettings(settings).treasury(), fees);
+    }
+    emit VTokenMinted(_msgSender(), nftTokenId, vtNetAmount, fees);
+
+    _nftDepositInfo[nftTokenId].f1OnClaim = paramValue("f1");
+    _nftDepositInfo[nftTokenId].claimed = true;
+    emit NftDepositClaimed(_currentEpochId, _msgSender(), nftTokenId);
+
+    _claimedNftDeposits.add(nftTokenId);
+
+    INftStakingPool(nftStakingPool).notifyNftDepositForUser(_msgSender(), nftTokenId);
+  }
+
+  function _redeemNft(uint256 nftTokenId) internal onlyInitialized onlyDepositedNft(nftTokenId) {
+    require(_nftDepositInfo[nftTokenId].owner == _msgSender(), "Not owner of NFT");
+    require(_nftDepositInfo[nftTokenId].claimed, "Not claimed deposit yet");
+    require(!_nftRedeems.contains(nftTokenId), "Already redeemed");
+
+    _nftRedeems.add(nftTokenId);
+    _nftRedeemInfo[nftTokenId] = Constants.NftRedeem({
+      owner: _msgSender(),
+      nftTokenId: nftTokenId,
+      redeemTime: block.timestamp,
+      redeemAtEpoch: _currentEpochId,
+      claimableTime: Math.max(
+        block.timestamp + paramValue( "NftRedeemWaitingPeriod") + 1,
+        _epochs[_currentEpochId].startTime + _epochs[_currentEpochId].duration + 1
+      ),
+      claimed: false
+    });
+    emit NftRedeem(_currentEpochId, _msgSender(), nftTokenId);
+
+    uint256 remainingTime = 0;
+    if (_nftRedeemInfo[nftTokenId].redeemTime < nftVestingEndTime) {
+      remainingTime = nftVestingEndTime - _nftRedeemInfo[nftTokenId].redeemTime;
+    }
+    uint256 vtAmount = nftVtAmount.mulDiv(Math.min(nftVestingDuration, remainingTime), nftVestingDuration);
+    uint256 fees = vtAmount.mulDiv(_nftDepositInfo[nftTokenId].f1OnClaim, 10 ** IProtocolSettings(settings).decimals());
+    uint256 vtBurnAmount = vtAmount - fees;
+    if (vtBurnAmount > 0) {
+      IVToken(vToken).burn(_msgSender(), vtBurnAmount);
+    }
+    emit VTokenBurned(_msgSender(), nftTokenId, vtBurnAmount);
+
+    INftStakingPool(nftStakingPool).notifyNftRedeemForUser(_msgSender(), nftTokenId);
+  }
+
+  function _claimRedeemNft(uint256 nftTokenId) internal onlyInitialized onlyRedeemedNft(nftTokenId) {
+    require(_nftRedeemInfo[nftTokenId].owner == _msgSender(), "Not owner of NFT");
+    require(!_nftRedeemInfo[nftTokenId].claimed, "Already claimed");
+    require(block.timestamp >= _nftRedeemInfo[nftTokenId].claimableTime, "Not claimable yet");
+
+    IERC721(nftToken).transferFrom(address(this), _msgSender(), nftTokenId);
+
+    _nftRedeemInfo[nftTokenId].claimed = true;
+
+    _nftDeposits.remove(nftTokenId);
+    delete _nftDepositInfo[nftTokenId];
+
+    _claimedNftDeposits.remove(nftTokenId);
+    _nftRedeems.remove(nftTokenId);
+    delete _nftRedeemInfo[nftTokenId];
+
+    emit NftRedeemClaimed(_currentEpochId, _msgSender(), nftTokenId);
   }
 
   /* ============== MODIFIERS =============== */
