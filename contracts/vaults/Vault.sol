@@ -406,7 +406,7 @@ contract Vault is IVault, ReentrancyGuard, ProtocolOwner {
     INftStakingPool(nftStakingPool).notifyNftDepositForUser(_msgSender(), nftTokenId);
   }
 
-  function _redeemNft(uint256 nftTokenId) internal onlyInitialized onlyDepositedNft(nftTokenId) {
+  function _redeemNft(uint256 nftTokenId) internal onlyInitialized onlyValidEpochId(_currentEpochId) onlyDepositedNft(nftTokenId) {
     require(_nftDepositInfo[nftTokenId].owner == _msgSender(), "Not owner of NFT");
     require(_nftDepositInfo[nftTokenId].claimed, "Not claimed deposit yet");
     require(!_nftRedeems.contains(nftTokenId), "Already redeemed");

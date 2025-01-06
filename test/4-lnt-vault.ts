@@ -90,8 +90,8 @@ describe('LNT Vault', () => {
     await time.increaseTo(genesisTime + ONE_DAY_IN_SECS * 2);
     await expect(vault.connect(Alice).claimDepositNft(1)).to.be.revertedWith(/Not claimable yet/);
     await expect(vault.connect(Bob).claimDepositNft(1)).to.be.revertedWith(/Not owner of NFT/);
-    // Could not redeem unclaimed deposit
-    await expect(vault.connect(Alice).redeemNft(1)).to.be.revertedWith(/Not claimed deposit yet/);
+    // Could not redeem unclaimed deposit, or before epoch 1
+    await expect(vault.connect(Alice).redeemNft(1)).to.be.revertedWith(/Invalid epoch id/);
 
     /**
      * Day 3 + 10 seconds: Alice claims deposit 1
