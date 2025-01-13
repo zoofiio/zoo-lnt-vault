@@ -24,9 +24,9 @@ const deployerKey: string = process.env.DEPLOYER_KEY || "";
 const infuraKey: string = process.env.INFURA_KEY || "";
 
 function createTestnetConfig(network: keyof typeof chainIds): NetworkUserConfig {
-  if (!infuraKey) {
-    throw new Error("Missing INFURA_KEY");
-  }
+  // if (!infuraKey) {
+  //   throw new Error("Missing INFURA_KEY");
+  // }
 
   let nodeUrl;
   switch (network) {
@@ -34,7 +34,8 @@ function createTestnetConfig(network: keyof typeof chainIds): NetworkUserConfig 
       nodeUrl = `https://mainnet.infura.io/v3/${infuraKey}`;
       break;
     case "sepolia":
-      nodeUrl = `https://sepolia.infura.io/v3/${infuraKey}`;
+      // nodeUrl = `https://sepolia.infura.io/v3/${infuraKey}`;
+      nodeUrl = 'https://eth-sepolia.public.blastapi.io';
       break;
     case 'bera-bartio':
       nodeUrl = 'https://bartio.rpc.berachain.com';

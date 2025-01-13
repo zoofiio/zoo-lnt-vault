@@ -1,13 +1,16 @@
-import * as _ from "lodash";
 import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
 import dotenv from "dotenv";
 import { ethers } from "hardhat";
-import { deployContract, wait1Tx } from "./hutils";
-import { 
-  MockERC20__factory, ProtocolSettings__factory, ZooProtocol__factory, Vault__factory, ZooProtocol,
-  NftStakingPoolFactory__factory, YtRewardsPoolFactory__factory, VaultCalculator__factory, MockERC721__factory
+import {
+  MockERC20__factory,
+  MockERC721__factory,
+  NftStakingPoolFactory__factory,
+  ProtocolSettings__factory,
+  Vault__factory,
+  YtRewardsPoolFactory__factory,
+  ZooProtocol__factory,
 } from "../typechain";
-import { deploy } from "@openzeppelin/hardhat-upgrades/dist/utils";
+import { deployContract, wait1Tx } from "./hutils";
 
 dotenv.config();
 
@@ -40,24 +43,54 @@ async function main() {
 
   const nftTokenAddress = await deployContract("MockERC721", [await protocol.getAddress(), "Mock ERC721", "MK721"]);
   const nftToken = MockERC721__factory.connect(nftTokenAddress, deployer);
-  
+
   const nftVestingTokenAddress = await deployContract("MockERC20", [await protocol.getAddress(), "Mock ERC20", "MK20", 18]);
   const nftVestingToken = MockERC20__factory.connect(await nftVestingTokenAddress, deployer);
 
-  let trans = await nftToken.connect(deployer).batchSetTesters(testers, true);
-  await trans.wait();
-  console.log(`${await nftToken.symbol()}: ${testers} are now testers`);
-
-  trans = await nftVestingToken.connect(deployer).batchSetTesters(testers, true);
-  await trans.wait();
-  console.log(`${await nftVestingToken.symbol()}: ${testers} are now testers`);
+  const needTests = (
+    await Promise.all(
+      testers.map((item) =>
+        nftToken
+          .connect(deployer)
+          .isTester(item)
+          .then((isTester) => ({ tester: item, isTester }))
+      )
+    )
+  )
+    .filter((item) => !item.isTester)
+    .map((item) => item.tester);
+  if (needTests.length) {
+    await nftToken.connect(deployer).batchSetTesters(needTests, true).then(wait1Tx);
+    console.log(`${await nftToken.symbol()}: ${needTests} are now testers`);
+  }
+  const needTests2 = (
+    await Promise.all(
+      testers.map((item) =>
+        nftVestingToken
+          .connect(deployer)
+          .isTester(item)
+          .then((isTester) => ({ tester: item, isTester }))
+      )
+    )
+  )
+    .filter((item) => !item.isTester)
+    .map((item) => item.tester);
+  if (needTests2) {
+    await nftVestingToken.connect(deployer).batchSetTesters(needTests2, true).then(wait1Tx);
+    console.log(`${await nftVestingToken.symbol()}: ${needTests2} are now testers`);
+  }
 
   const vaultAddress = await deployContract(
     "Vault",
     [
-      await protocol.getAddress(), await settings.getAddress(), 
-      await nftStakingPoolFactory.getAddress(), await ytRewardsPoolFactory.getAddress(),
-      await nftToken.getAddress(), await nftVestingToken.getAddress(), "Zoo vToken", "VT"
+      await protocol.getAddress(),
+      await settings.getAddress(),
+      await nftStakingPoolFactory.getAddress(),
+      await ytRewardsPoolFactory.getAddress(),
+      await nftToken.getAddress(),
+      await nftVestingToken.getAddress(),
+      "Zoo vToken",
+      "VT",
     ],
     `${await nftToken.symbol()}_Vault`,
     {
@@ -66,10 +99,11 @@ async function main() {
       },
     }
   );
-
-  trans = await protocol.connect(deployer).addVault(vaultAddress);
-  await trans.wait();
-  console.log(`Added vault to protocol`);
+  console.info("VToken:", await Vault__factory.connect(vaultAddress, deployer).vToken());
+  if (!(await protocol.connect(deployer).isVault(vaultAddress))) {
+    await protocol.connect(deployer).addVault(vaultAddress).then(wait1Tx);
+    console.log(`Added vault to protocol`);
+  }
 }
 
 // We recommend this pattern to be able to use async/await everywhere
