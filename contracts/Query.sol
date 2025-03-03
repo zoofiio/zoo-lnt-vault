@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity ^0.8.18;
+pragma solidity ^0.8.20;
 import "./interfaces/IVault.sol";
 import "./libs/Constants.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -107,6 +107,8 @@ contract Query is Ownable {
         uint256 userYTPoints;
         uint256 userClaimableYTPoints;
     }
+
+    constructor() Ownable(_msgSender()) {}
 
     function queryVault(address vault) external view returns (Vault memory) {
         return _queryVault(vault);

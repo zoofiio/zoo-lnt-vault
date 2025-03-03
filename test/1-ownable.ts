@@ -31,7 +31,11 @@ describe("Ownable", () => {
       expect(owner).to.equal(protocolOwner, "Contract owner is protocol owner Alice");
     }
     
-    await expect(protocol.connect(Bob).transferOwnership(Bob.address)).to.be.revertedWith("Ownable: caller is not the owner");
+    await expect(protocol.connect(Bob).transferOwnership(Bob.address)).to.be.revertedWithCustomError(
+      protocol,
+      "OwnableUnauthorizedAccount"
+    ).withArgs(Bob.address);
+
     await expect(protocol.connect(Alice).transferOwnership(Bob.address))
       .to.emit(protocol, "OwnershipTransferred")
       .withArgs(Alice.address, Bob.address);
@@ -74,7 +78,10 @@ describe("Ownable", () => {
     );
     const dummyVault = Vault__factory.connect(await DmyVaultContract.getAddress(), provider);
 
-    await expect(protocol.connect(Bob).addVault(await dummyVault.getAddress())).to.be.revertedWith("Ownable: caller is not the owner");
+    await expect(protocol.connect(Bob).addVault(await dummyVault.getAddress())).to.be.revertedWithCustomError(
+      protocol,
+      "OwnableUnauthorizedAccount"
+    ).withArgs(Bob.address);
     await expect(protocol.connect(Alice).transferOwnership(Bob.address)).not.to.be.reverted;
     await expect(protocol.connect(Bob).addVault(await dummyVault.getAddress()))
       .to.emit(protocol, "VaultAdded")

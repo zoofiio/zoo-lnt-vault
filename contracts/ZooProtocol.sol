@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity ^0.8.18;
+pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
 import "./interfaces/IVault.sol";
@@ -16,7 +16,7 @@ contract ZooProtocol is IZooProtocol, Ownable, ReentrancyGuard {
   EnumerableSet.AddressSet internal _vaults;
   mapping(address => EnumerableSet.AddressSet) _assetTokenToVaults;
 
-  constructor() {}
+  constructor() Ownable(_msgSender()) {}
 
   /* ========== Views ========= */
 
