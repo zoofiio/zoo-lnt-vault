@@ -3,6 +3,8 @@ pragma solidity ^0.8.20;
 
 interface IZooProtocol {
 
+  function lntFactory() external view returns (address);
+
   function protocolOwner() external view returns (address);
 
   function isVault(address vaultAddress) external view returns (bool);

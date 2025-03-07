@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
 import "../interfaces/IProtocolSettings.sol";
+import "../interfaces/IZooProtocol.sol";
 import "../libs/Constants.sol";
 import "./ProtocolOwner.sol";
 
@@ -85,7 +86,7 @@ contract ProtocolSettings is IProtocolSettings, ProtocolOwner, ReentrancyGuard {
   }
 
   function vaultParamValue(address vault, bytes32 param) public view returns (uint256) {
-    require(protocol.isVault(vault), "Invalid vault");
+    // require(IZooProtocol(protocol).isVault(vault), "Invalid vault");
     require(param.length > 0, "Empty param name");
 
     if (_vaultParamsSet[vault][param]) {
@@ -135,7 +136,7 @@ contract ProtocolSettings is IProtocolSettings, ProtocolOwner, ReentrancyGuard {
   }
 
   function _updateVaultParamValue(address vault, bytes32 param, uint256 value) internal {
-    require(protocol.isVault(vault), "Invalid vault");
+    require(IZooProtocol(protocol).isVault(vault), "Invalid vault");
     require(isValidParam(param, value), "Invalid param or value");
 
     _vaultParamsSet[vault][param] = true;

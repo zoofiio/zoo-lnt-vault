@@ -9,6 +9,12 @@ library Constants {
 
   uint256 public constant PROTOCOL_DECIMALS = 10;
 
+  enum NftType {
+    UNKNOWN,
+    ERC721,
+    ERC1155
+  }
+
   enum YtRewardsPoolOption {
     Opt1,
     Opt2

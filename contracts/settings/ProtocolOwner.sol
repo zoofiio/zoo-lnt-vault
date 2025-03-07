@@ -5,20 +5,15 @@ import "@openzeppelin/contracts/utils/Context.sol";
 import "../interfaces/IZooProtocol.sol";
 
 abstract contract ProtocolOwner is Context {
-  IZooProtocol public immutable protocol;
+  address public immutable protocol;
 
   constructor(address _protocol_) {
     require(_protocol_ != address(0), "Zero address detected");
-    protocol = IZooProtocol(_protocol_);
-  }
-
-  modifier onlyProtocol() {
-    require(_msgSender() == address(protocol), "Ownable: caller is not the protocol");
-    _;
+    protocol = _protocol_;
   }
 
   modifier onlyOwner() {
-    require(_msgSender() == IZooProtocol(protocol).protocolOwner(), "Ownable: caller is not the owner");
+    require(_msgSender() == owner(), "Ownable: caller is not the owner");
     _;
   }
 

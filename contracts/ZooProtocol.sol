@@ -12,6 +12,8 @@ import "./settings/ProtocolSettings.sol";
 contract ZooProtocol is IZooProtocol, Ownable, ReentrancyGuard {
   using EnumerableSet for EnumerableSet.AddressSet;
 
+  address public lntFactory;
+
   EnumerableSet.AddressSet internal _assetTokens;
   EnumerableSet.AddressSet internal _vaults;
   mapping(address => EnumerableSet.AddressSet) _assetTokenToVaults;
@@ -22,25 +24,6 @@ contract ZooProtocol is IZooProtocol, Ownable, ReentrancyGuard {
 
   function protocolOwner() public view returns (address) {
     return owner();
-  }
-
-  /* ========== Vault Operations ========== */
-
-  function addVault(address vault) external nonReentrant onlyOwner {
-    require(!_vaults.contains(vault), "Vault already added");
-    _vaults.add(vault);
-
-    address assetToken = IVault(vault).nftToken();
-    if (!_assetTokens.contains(assetToken)) {
-      _assetTokens.add(assetToken);
-    }
-
-    EnumerableSet.AddressSet storage tokenVaults = _assetTokenToVaults[assetToken];
-    if (!tokenVaults.contains(vault)) {
-      tokenVaults.add(vault);
-    }
-
-    emit VaultAdded(assetToken, vault);
   }
 
   function assetTokens() external view returns (address[] memory) {
@@ -62,7 +45,35 @@ contract ZooProtocol is IZooProtocol, Ownable, ReentrancyGuard {
     return _assetTokenToVaults[assetToken].values();
   }
 
+  /* ========== RESTRICTED FUNCTIONS ========== */
+
+  function setLntFactory(address _lntFactory) external nonReentrant onlyOwner {
+    require(_lntFactory != address(0), "Zero address detected");
+    lntFactory = _lntFactory;
+    emit LntFactoryUpdated(_lntFactory);
+  }
+
+  function addVault(address vault) external nonReentrant onlyOwner {
+    require(!_vaults.contains(vault), "Vault already added");
+    _vaults.add(vault);
+
+    address assetToken = IVault(vault).nftToken();
+    if (!_assetTokens.contains(assetToken)) {
+      _assetTokens.add(assetToken);
+    }
+
+    EnumerableSet.AddressSet storage tokenVaults = _assetTokenToVaults[assetToken];
+    if (!tokenVaults.contains(vault)) {
+      tokenVaults.add(vault);
+    }
+
+    emit VaultAdded(assetToken, vault);
+  }
+
+
   /* =============== EVENTS ============= */
+
+  event LntFactoryUpdated(address indexed lntFactory);
 
   event VaultAdded(address indexed assetToken, address vault);
 }
