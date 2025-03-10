@@ -13,6 +13,7 @@ contract ZooProtocol is IZooProtocol, Ownable, ReentrancyGuard {
   using EnumerableSet for EnumerableSet.AddressSet;
 
   address public lntFactory;
+  address public lntMarketRouter;
 
   EnumerableSet.AddressSet internal _assetTokens;
   EnumerableSet.AddressSet internal _vaults;
@@ -53,6 +54,12 @@ contract ZooProtocol is IZooProtocol, Ownable, ReentrancyGuard {
     emit LntFactoryUpdated(_lntFactory);
   }
 
+  function setLntMarketRouter(address _lntMarketRouter) external nonReentrant onlyOwner {
+    require(_lntMarketRouter != address(0), "Zero address detected");
+    lntMarketRouter = _lntMarketRouter;
+    emit LntMarketRouterUpdated(_lntMarketRouter);
+  }
+
   function addVault(address vault) external nonReentrant onlyOwner {
     require(!_vaults.contains(vault), "Vault already added");
     _vaults.add(vault);
@@ -74,6 +81,8 @@ contract ZooProtocol is IZooProtocol, Ownable, ReentrancyGuard {
   /* =============== EVENTS ============= */
 
   event LntFactoryUpdated(address indexed lntFactory);
+
+  event LntMarketRouterUpdated(address indexed lntMarketRouter);
 
   event VaultAdded(address indexed assetToken, address vault);
 }

@@ -21,6 +21,8 @@ library LntMarketLibrary {
       factory,
       keccak256(abi.encodePacked(token0, token1)),
       // TODO: update init code hash
+      // const LntMarket = await ethers.getContractFactory('LntMarket');
+      // console.log(ethers.keccak256(LntMarket.bytecode));
       hex'967873f27f14971d6d7a2262b2b633a714cd4448593dbe690578976760435411' // init code hash
     )))));
   }

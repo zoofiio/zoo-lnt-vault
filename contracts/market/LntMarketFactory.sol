@@ -1,26 +1,32 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.20;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+
+import "../interfaces/IProtocolSettings.sol";
 import "../interfaces/market/ILntMarketFactory.sol";
 import "./LntMarket.sol";
 
-contract LntMarketFactory is ILntMarketFactory, Ownable {
-  address public feeTo;
-  address public feeToSetter;
+contract LntMarketFactory is ILntMarketFactory, ReentrancyGuard {
+  address public immutable settings;
 
   mapping(address => mapping(address => address)) public getPair;
   address[] public allPairs;
 
-  constructor() Ownable(msg.sender) {
-    feeToSetter = msg.sender;
+  constructor(address _settings) {
+    require(_settings != address(0), "Zero address detected");
+    settings = _settings;
+  }
+
+  function feeTo() external view returns (address) {
+    return IProtocolSettings(settings).treasury();
   }
 
   function allPairsLength() external view returns (uint) {
     return allPairs.length;
   }
 
-  function createPair(address tokenA, address tokenB) external returns (address pair) {
+  function createPair(address tokenA, address tokenB) external nonReentrant returns (address pair) {
     require(tokenA != tokenB, 'LntMarketFactory: IDENTICAL_ADDRESSES');
     (address token0, address token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
     require(token0 != address(0), 'LntMarketFactory: ZERO_ADDRESS');
@@ -39,15 +45,5 @@ contract LntMarketFactory is ILntMarketFactory, Ownable {
     allPairs.push(pair);
     
     emit PairCreated(token0, token1, pair, allPairs.length);
-  }
-
-  function setFeeTo(address _feeTo) external {
-    require(msg.sender == feeToSetter, 'LntMarketFactory: FORBIDDEN');
-    feeTo = _feeTo;
-  }
-
-  function setFeeToSetter(address _feeToSetter) external {
-    require(msg.sender == feeToSetter, 'LntMarketFactory: FORBIDDEN');
-    feeToSetter = _feeToSetter;
   }
 }

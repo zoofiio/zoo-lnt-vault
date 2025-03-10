@@ -26,8 +26,8 @@ contract LntVaultERC1155 is LntVaultBase, ERC1155Holder {
   mapping(uint256 => VestingSchedule) internal _tokenVestingSchedule;
 
   constructor(
-    address _protocol, address _settings, address _nft, address _T, VestingSchedule[] memory _vestingSchedules_
-  ) LntVaultBase(_protocol, _settings, _nft, _T) {
+    address _protocol, address _settings, address _nft, VestingSchedule[] memory _vestingSchedules_
+  ) LntVaultBase(_protocol, _settings, _nft) {
     require(NFTType == Constants.NftType.ERC1155, "Invalid NFT");
 
     require(_vestingSchedules_.length > 0, "Invalid vesting schedules");

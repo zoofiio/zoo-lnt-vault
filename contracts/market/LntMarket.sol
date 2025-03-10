@@ -2,7 +2,7 @@
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 import "../interfaces/market/ILntMarket.sol";
 import "../interfaces/market/ILntMarketFactory.sol";
@@ -15,6 +15,16 @@ contract LntMarket is ILntMarket, ReentrancyGuard {
 
   uint public constant MINIMUM_LIQUIDITY = 10**3;
   bytes4 private constant SELECTOR = bytes4(keccak256(bytes('transfer(address,uint256)')));
+
+  bytes32 public immutable DOMAIN_SEPARATOR;
+  bytes32 public constant DOMAIN_TYPEHASH = keccak256(
+    "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
+  );
+  bytes32 public constant PERMIT_TYPEHASH = keccak256(
+    "Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"
+  );
+  
+  mapping(address => uint) public nonces;
 
   address public factory;
   address public token0;
@@ -46,6 +56,20 @@ contract LntMarket is ILntMarket, ReentrancyGuard {
 
   constructor() {
     factory = msg.sender;
+    
+    uint256 chainId;
+    assembly {
+      chainId := chainid()
+    }
+    DOMAIN_SEPARATOR = keccak256(
+      abi.encode(
+        DOMAIN_TYPEHASH,
+        keccak256(bytes(name)),
+        keccak256(bytes("1")),
+        chainId,
+        address(this)
+      )
+    );
   }
 
   // called once by the factory at time of deployment
@@ -235,5 +259,31 @@ contract LntMarket is ILntMarket, ReentrancyGuard {
     balanceOf[to] += value;
     emit Transfer(from, to, value);
     return true;
+  }
+
+  function permit(
+    address owner, 
+    address spender, 
+    uint value, 
+    uint deadline, 
+    uint8 v, 
+    bytes32 r, 
+    bytes32 s
+  ) external {
+    require(deadline >= block.timestamp, 'LntMarket: EXPIRED');
+    
+    bytes32 digest = keccak256(
+      abi.encodePacked(
+        '\x19\x01',
+        DOMAIN_SEPARATOR,
+        keccak256(abi.encode(PERMIT_TYPEHASH, owner, spender, value, nonces[owner]++, deadline))
+      )
+    );
+    
+    address recoveredAddress = ecrecover(digest, v, r, s);
+    require(recoveredAddress != address(0) && recoveredAddress == owner, 'LntMarket: INVALID_SIGNATURE');
+    
+    allowance[owner][spender] = value;
+    emit Approval(owner, spender, value);
   }
 }
