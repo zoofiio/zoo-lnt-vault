@@ -82,7 +82,7 @@ contract YtRewardsPoolOpt1 is Context, ReentrancyGuard {
     emit YtSwapped(user, deltaYtAmount);
   }
 
-  function addRewards(address rewardsToken, uint256 rewardsAmount) external nonReentrant onlyVault updateRewards(address(0), rewardsToken) {
+  function addRewards(address rewardsToken, uint256 rewardsAmount) external nonReentrant onlyVault {
     require(_totalSupply > 0, "Cannot add rewards without YT staked");
     require(rewardsAmount > 0, "Too small rewards amount");
 
@@ -121,10 +121,8 @@ contract YtRewardsPoolOpt1 is Context, ReentrancyGuard {
   }
 
   function _updateRewards(address user, address rewardsToken) internal {
-    if (user != address(0)) {
-      userRewards[user][rewardsToken] = earned(user, rewardsToken);
-      userRewardsPerYtPaid[user][rewardsToken] = rewardsPerYt[rewardsToken];
-    }
+    userRewards[user][rewardsToken] = earned(user, rewardsToken);
+    userRewardsPerYtPaid[user][rewardsToken] = rewardsPerYt[rewardsToken];
   }
 
   /* ========== EVENTS ========== */
