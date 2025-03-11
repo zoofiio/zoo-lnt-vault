@@ -45,17 +45,21 @@ contract YieldToken is ERC20, ProtocolOwner, ReentrancyGuard {
     address _vault
   ) ERC20(name, symbol) ProtocolOwner(_protocol) {
     require(_vault != address(0), "Zero vault address");
-        
     vault = _vault;
     epochEndTimestamp = type(uint256).max;
   }
 
   /* ========== VIEWS ========== */
 
+  // Determine if an address is excluded from rewards
+  function excludedFromRewards(address account) public view returns (bool) {
+    return account == address(0) || account == vault || account == address(this);
+  }
+
   // Query user's standard rewards
   function earned(address user, address rewardToken) public view returns (uint256) {
-    // Vault doesn't earn rewards
-    if (user == vault) return 0;
+    // Excluded addresses don't earn rewards
+    if (excludedFromRewards(user)) return 0;
     
     return balanceOf(user).mulDiv(
       rewardsPerToken[rewardToken] - userRewardsPerTokenPaid[user][rewardToken],
@@ -65,8 +69,8 @@ contract YieldToken is ERC20, ProtocolOwner, ReentrancyGuard {
 
   // Get collectible time-weighted balance for a user
   function collectableTimeWeightedBalance(address user) public view returns (uint256, uint256) {
-    // Vault doesn't accumulate time-weighted balance
-    if (user == vault) return (block.timestamp, 0);
+    // Excluded addresses don't accumulate time-weighted balance
+    if (excludedFromRewards(user)) return (block.timestamp, 0);
     
     uint256 collectTimestamp = collectTimestampApplicable();
     uint256 deltaTime = collectTimestamp - lastCollectTime[user];
@@ -82,8 +86,8 @@ contract YieldToken is ERC20, ProtocolOwner, ReentrancyGuard {
 
   // Query user's time-weighted rewards
   function timeWeightedEarned(address user, address rewardToken) public view returns (uint256) {
-    // Vault doesn't earn time-weighted rewards
-    if (user == vault) return 0;
+    // Excluded addresses don't earn time-weighted rewards
+    if (excludedFromRewards(user)) return 0;
     
     return _timeWeightedBalances[user].mulDiv(
       timeWeightedRewardsPerToken[rewardToken] - userTimeWeightedRewardsPerTokenPaid[user][rewardToken],
@@ -91,9 +95,9 @@ contract YieldToken is ERC20, ProtocolOwner, ReentrancyGuard {
     ) + userTimeWeightedRewards[user][rewardToken];
   }
 
-  // Calculate total supply excluding the vault's balance
+  // Calculate total supply eligible for rewards (excluding vault, address(0) and this contract)
   function circulatingSupply() public view returns (uint256) {
-    return totalSupply() - balanceOf(vault);
+    return totalSupply() - balanceOf(vault) - balanceOf(address(this));
   }
 
   // Get all reward tokens
@@ -120,13 +124,13 @@ contract YieldToken is ERC20, ProtocolOwner, ReentrancyGuard {
 
   // User manually collects time-weighted balance
   function collectTimeWeightedBalance() external nonReentrant {
+    require(!excludedFromRewards(_msgSender()), "Address excluded from rewards");
     _collectTimeWeightedBalance(_msgSender());
   }
 
   // User manually settles and claims rewards
   function claimRewards() external nonReentrant {
-    // Vault can't claim rewards
-    require(_msgSender() != vault, "Vault cannot claim rewards");
+    require(!excludedFromRewards(_msgSender()), "Address excluded from rewards");
     
     _updateRewards(_msgSender());
     _collectTimeWeightedBalance(_msgSender());
@@ -139,7 +143,7 @@ contract YieldToken is ERC20, ProtocolOwner, ReentrancyGuard {
   /* ========== RESTRICTED FUNCTIONS ========== */
 
   function setEpochEndTimestamp(uint256 _epochEndTimestamp) external onlyVault {
-    require(_epochEndTimestamp > block.timestamp, "Invalid epoch end timestamp");
+    require(_epochEndTimestamp >= block.timestamp, "Invalid epoch end timestamp");
     epochEndTimestamp = _epochEndTimestamp;
     emit EpochEndTimestampUpdated(_epochEndTimestamp);
   }
@@ -170,7 +174,7 @@ contract YieldToken is ERC20, ProtocolOwner, ReentrancyGuard {
     require(amount > 0, "Cannot add zero rewards");
     require(_rewardsTokens.length() + _timeWeightedRewardsTokens.length() <= MAX_REWARDS_TOKENS, "Too many reward tokens");
     
-    uint256 supply = _totalTimeWeightedBalance;  // This already excludes vault's balance
+    uint256 supply = _totalTimeWeightedBalance;
     require(supply > 0, "No time-weighted balance supply");
     
     if (!_timeWeightedRewardsTokens.contains(rewardToken)) {
@@ -199,8 +203,11 @@ contract YieldToken is ERC20, ProtocolOwner, ReentrancyGuard {
 
   // Automatically settle rewards for both users during transfers
   function _update(address from, address to, uint256 value) internal override {
-    // Update rewards and collect time-weighted balance for both parties first, excluding zero address (mint/burn operations)
-    if (from != address(0) && from != vault) {
+    bool fromExcluded = excludedFromRewards(from);
+    bool toExcluded = excludedFromRewards(to);
+    
+    // Handle rewards for non-excluded addresses
+    if (from != address(0) && !fromExcluded) {
       // Update and collect rewards for the sender
       _updateRewards(from);
       _collectTimeWeightedBalance(from);
@@ -210,7 +217,7 @@ contract YieldToken is ERC20, ProtocolOwner, ReentrancyGuard {
       _claimRewardsForUser(from);
     }
     
-    if (to != address(0) && to != vault) {
+    if (to != address(0) && !toExcluded) {
       // Update and collect rewards for the receiver
       _updateRewards(to);
       _collectTimeWeightedBalance(to);
@@ -251,8 +258,8 @@ contract YieldToken is ERC20, ProtocolOwner, ReentrancyGuard {
 
   // Update user's standard rewards
   function _updateRewards(address user) internal {
-    // Vault doesn't get rewards
-    if (user == vault) return;
+    // Excluded addresses don't get rewards
+    if (excludedFromRewards(user)) return;
     
     for (uint i = 0; i < _rewardsTokens.length(); i++) {
       address rewardToken = _rewardsTokens.at(i);
@@ -263,8 +270,8 @@ contract YieldToken is ERC20, ProtocolOwner, ReentrancyGuard {
 
   // Update user's time-weighted rewards
   function _updateTimeWeightedRewards(address user) internal {
-    // Vault doesn't get time-weighted rewards
-    if (user == vault) return;
+    // Excluded addresses don't get time-weighted rewards
+    if (excludedFromRewards(user)) return;
     
     for (uint i = 0; i < _timeWeightedRewardsTokens.length(); i++) {
       address rewardToken = _timeWeightedRewardsTokens.at(i);
@@ -275,8 +282,8 @@ contract YieldToken is ERC20, ProtocolOwner, ReentrancyGuard {
 
   // Collect time-weighted balance for a user
   function _collectTimeWeightedBalance(address user) internal {
-    // Vault doesn't accumulate time-weighted balance
-    if (user == vault) return;
+    // Excluded addresses don't accumulate time-weighted balance
+    if (excludedFromRewards(user)) return;
     
     (uint256 collectTimestamp, uint256 deltaTimeWeightedAmount) = collectableTimeWeightedBalance(user);
     

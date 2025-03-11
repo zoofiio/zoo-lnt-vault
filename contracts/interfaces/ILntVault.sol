@@ -44,8 +44,6 @@ interface ILntVault is IERC165 {
     uint256 vestingDuration;
   }
 
-  function initializeVT(address _VT) external;
-
   /**
    * @notice deposit nft into the vault. Caller should own the nft or is approved to transfer it
    * @param receiver address to receive the vesting token

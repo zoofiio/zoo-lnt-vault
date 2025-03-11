@@ -114,13 +114,8 @@ contract YtRewardsPoolOpt1 is Context, ReentrancyGuard {
     _;
   }
 
-  modifier updateRewards(address user, address rewardsToken) {
-    _updateRewards(user, rewardsToken);
-
-    _;
-  }
-
   function _updateRewards(address user, address rewardsToken) internal {
+    require(user != address(0), "Invalid address");
     userRewards[user][rewardsToken] = earned(user, rewardsToken);
     userRewardsPerYtPaid[user][rewardsToken] = rewardsPerYt[rewardsToken];
   }

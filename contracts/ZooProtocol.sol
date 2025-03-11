@@ -12,7 +12,6 @@ import "./settings/ProtocolSettings.sol";
 contract ZooProtocol is IZooProtocol, Ownable, ReentrancyGuard {
   using EnumerableSet for EnumerableSet.AddressSet;
 
-  address public lntFactory;
   address public lntMarketRouter;
 
   EnumerableSet.AddressSet internal _assetTokens;
@@ -48,12 +47,6 @@ contract ZooProtocol is IZooProtocol, Ownable, ReentrancyGuard {
 
   /* ========== RESTRICTED FUNCTIONS ========== */
 
-  function setLntFactory(address _lntFactory) external nonReentrant onlyOwner {
-    require(_lntFactory != address(0), "Zero address detected");
-    lntFactory = _lntFactory;
-    emit LntFactoryUpdated(_lntFactory);
-  }
-
   function setLntMarketRouter(address _lntMarketRouter) external nonReentrant onlyOwner {
     require(_lntMarketRouter != address(0), "Zero address detected");
     lntMarketRouter = _lntMarketRouter;
@@ -79,8 +72,6 @@ contract ZooProtocol is IZooProtocol, Ownable, ReentrancyGuard {
 
 
   /* =============== EVENTS ============= */
-
-  event LntFactoryUpdated(address indexed lntFactory);
 
   event LntMarketRouterUpdated(address indexed lntMarketRouter);
 

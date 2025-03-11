@@ -9,13 +9,10 @@ import "./interfaces/ILntVault.sol";
 
 contract LntFactory is ReentrancyGuard {
 
-
   function createVT(
     address _vault, string memory _name, string memory _symbol, uint8 _decimals
   ) external nonReentrant returns (address) {
     address vt = address(new VestingToken(_vault, _name, _symbol, _decimals));
-    ILntVault(_vault).initializeVT(vt);
-
     return vt;
   }
 

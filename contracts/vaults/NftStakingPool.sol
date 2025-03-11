@@ -91,7 +91,7 @@ contract NftStakingPool is Context, ReentrancyGuard {
     emit NftRedeem(user, nftTokenId);
   }
 
-  function addRewards(address rewardsToken, uint256 rewardsAmount) external nonReentrant onlyVault updateRewards(address(0), rewardsToken) {
+  function addRewards(address rewardsToken, uint256 rewardsAmount) external nonReentrant onlyVault {
     require(_totalSupply > 0, "Cannot add rewards without YT staked");
     require(rewardsAmount > 0, "Too small rewards amount");
 
@@ -123,17 +123,10 @@ contract NftStakingPool is Context, ReentrancyGuard {
     _;
   }
 
-  modifier updateRewards(address user, address rewardsToken) {
-    _updateRewards(user, rewardsToken);
-
-    _;
-  }
-
   function _updateRewards(address user, address rewardsToken) internal {
-    if (user != address(0)) {
-      userRewards[user][rewardsToken] = earned(user, rewardsToken);
-      userRewardsPerNftPaid[user][rewardsToken] = rewardsPerNft[rewardsToken];
-    }
+    require(user != address(0), "Invalid input");
+    userRewards[user][rewardsToken] = earned(user, rewardsToken);
+    userRewardsPerNftPaid[user][rewardsToken] = rewardsPerNft[rewardsToken];
   }
 
   /* ========== EVENTS ========== */

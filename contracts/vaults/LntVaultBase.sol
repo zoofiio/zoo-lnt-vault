@@ -140,7 +140,7 @@ abstract contract LntVaultBase is ILntVault, ReentrancyGuard, ProtocolOwner {
 
   /* ========== RESTRICTED FUNCTIONS ========== */
 
-  function initializeVT(address _VT) external nonReentrant onlyLntFactory {
+  function initializeVT(address _VT) external nonReentrant onlyOwner {
     require(_VT != address(0), "Zero address detected");
 
     require(!initializedVT, "Already initialized");
@@ -161,11 +161,6 @@ abstract contract LntVaultBase is ILntVault, ReentrancyGuard, ProtocolOwner {
   }
 
   /* ============== MODIFIERS =============== */
-
-  modifier onlyLntFactory() {
-    require(_msgSender() == IZooProtocol(protocol).lntFactory(), "Not LntFactory");
-    _;
-  }
 
   modifier onlyInitializedVT() {
     require(initializedVT, "Not initialized VT");
