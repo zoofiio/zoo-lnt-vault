@@ -13,7 +13,7 @@ abstract contract VaultSettings is IVaultSettings, ReentrancyGuard {
   using EnumerableSet for EnumerableSet.Bytes32Set;
 
   address public treasury;
-  uint256 public constant decimals = Constants.PROTOCOL_DECIMALS;
+  uint256 public constant settingDecimals = Constants.PROTOCOL_DECIMALS;
 
   EnumerableSet.Bytes32Set internal _paramsSet;
   mapping(bytes32 => ParamConfig) internal _paramConfigs;

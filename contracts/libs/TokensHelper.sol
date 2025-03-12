@@ -4,8 +4,17 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./Constants.sol";
 
-library TokensTransfer {
+library TokensHelper {
   using SafeERC20 for IERC20;
+
+  function balance(address addr, address token) internal view returns (uint256) {
+    if (token == Constants.NATIVE_TOKEN) {
+      return addr.balance;
+    }
+    else {
+      return IERC20(token).balanceOf(addr);
+    }
+  }
 
   /// @dev Transfers a given amount of token.
   function transferTokens(

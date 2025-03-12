@@ -15,8 +15,10 @@ interface IYieldToken is IERC20 {
 
   function mint(address to, uint256 amount) external;
 
-  function addRewards(address rewardToken, uint256 amount) external;
+  function setEpochEndTimestamp(uint256 _epochEndTimestamp) external;
 
-  function addTimeWeightedRewards(address rewardToken, uint256 amount) external;
+  function addRewards(address rewardToken, uint256 amount) external payable;
+
+  function addTimeWeightedRewards(address rewardToken, uint256 amount) external payable;
   
 }

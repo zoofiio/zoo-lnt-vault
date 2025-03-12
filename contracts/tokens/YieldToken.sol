@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
 import "../interfaces/IYieldToken.sol";
-import "../libs/TokensTransfer.sol";
+import "../libs/TokensHelper.sol";
 
 contract YieldToken is IYieldToken, ERC20, ReentrancyGuard {
   using Math for uint256;
@@ -15,7 +15,7 @@ contract YieldToken is IYieldToken, ERC20, ReentrancyGuard {
 
   /* ========== STATE VARIABLES ========== */
 
-  uint256 public MAX_REWARDS_TOKENS = 10;
+  uint256 public constant MAX_REWARDS_TOKENS = 20;
   uint256 public epochEndTimestamp;
   address public immutable vault;
   
@@ -39,9 +39,9 @@ contract YieldToken is IYieldToken, ERC20, ReentrancyGuard {
   /* ========== CONSTRUCTOR ========== */
 
   constructor(
+    address _vault,
     string memory name,
-    string memory symbol,
-    address _vault
+    string memory symbol
   ) ERC20(name, symbol) {
     require(_vault != address(0), "Zero vault address");
     vault = _vault;
@@ -51,13 +51,12 @@ contract YieldToken is IYieldToken, ERC20, ReentrancyGuard {
   /* ========== VIEWS ========== */
 
   // Determine if an address is excluded from rewards
-  function excludedFromRewards(address account) public view returns (bool) {
-    return account == address(0) || account == vault || account == address(this);
+  function excludedFromRewards(address account) public view noneZeroAddress(account) returns (bool) {
+    return account == vault || account == address(this);
   }
 
   // Query user's standard rewards
-  function earned(address user, address rewardToken) public view returns (uint256) {
-    // Excluded addresses don't earn rewards
+  function earned(address user, address rewardToken) public view noneZeroAddress(user) returns (uint256) {
     if (excludedFromRewards(user)) return 0;
     
     return balanceOf(user).mulDiv(
@@ -67,8 +66,7 @@ contract YieldToken is IYieldToken, ERC20, ReentrancyGuard {
   }
 
   // Get collectible time-weighted balance for a user
-  function collectableTimeWeightedBalance(address user) public view returns (uint256, uint256) {
-    // Excluded addresses don't accumulate time-weighted balance
+  function collectableTimeWeightedBalance(address user) public view noneZeroAddress(user) returns (uint256, uint256) {
     if (excludedFromRewards(user)) return (block.timestamp, 0);
     
     uint256 collectTimestamp = collectTimestampApplicable();
@@ -84,8 +82,7 @@ contract YieldToken is IYieldToken, ERC20, ReentrancyGuard {
   }
 
   // Query user's time-weighted rewards
-  function timeWeightedEarned(address user, address rewardToken) public view returns (uint256) {
-    // Excluded addresses don't earn time-weighted rewards
+  function timeWeightedEarned(address user, address rewardToken) public view noneZeroAddress(user) returns (uint256) {
     if (excludedFromRewards(user)) return 0;
     
     return _timeWeightedBalances[user].mulDiv(
@@ -94,7 +91,7 @@ contract YieldToken is IYieldToken, ERC20, ReentrancyGuard {
     ) + userTimeWeightedRewards[user][rewardToken];
   }
 
-  // Calculate total supply eligible for rewards (excluding vault, address(0) and this contract)
+  // Calculate total supply eligible for rewards (excluding vault and this contract)
   function circulatingSupply() public view returns (uint256) {
     return totalSupply() - balanceOf(vault) - balanceOf(address(this));
   }
@@ -121,13 +118,11 @@ contract YieldToken is IYieldToken, ERC20, ReentrancyGuard {
 
   /* ========== MUTATIVE FUNCTIONS ========== */
 
-  // User manually collects time-weighted balance
   function collectTimeWeightedBalance() external nonReentrant {
     require(!excludedFromRewards(_msgSender()), "Address excluded from rewards");
     _collectTimeWeightedBalance(_msgSender());
   }
 
-  // User manually settles and claims rewards
   function claimRewards() external nonReentrant {
     require(!excludedFromRewards(_msgSender()), "Address excluded from rewards");
     
@@ -135,7 +130,6 @@ contract YieldToken is IYieldToken, ERC20, ReentrancyGuard {
     _collectTimeWeightedBalance(_msgSender());
     _updateTimeWeightedRewards(_msgSender());
     
-    // Use the internal function to claim rewards
     _claimRewardsForUser(_msgSender());
   }
 
@@ -146,48 +140,56 @@ contract YieldToken is IYieldToken, ERC20, ReentrancyGuard {
   }
 
   function setEpochEndTimestamp(uint256 _epochEndTimestamp) external nonReentrant onlyVault {
-    require(_epochEndTimestamp >= block.timestamp, "Invalid epoch end timestamp");
+    require(_epochEndTimestamp > block.timestamp, "Invalid epoch end timestamp");
     epochEndTimestamp = _epochEndTimestamp;
     emit EpochEndTimestampUpdated(_epochEndTimestamp);
   }
 
   // Add standard rewards
-  function addRewards(address rewardToken, uint256 amount) external nonReentrant onlyVault {
+  function addRewards(address rewardToken, uint256 amount) external payable override nonReentrant onlyVault {
     require(amount > 0, "Cannot add zero rewards");
-    require(_rewardsTokens.length() + _timeWeightedRewardsTokens.length() <= MAX_REWARDS_TOKENS, "Too many reward tokens");
     
-    uint256 supply = circulatingSupply();  // Use circulating supply instead of total supply
+    uint256 supply = circulatingSupply();
     require(supply > 0, "No circulating supply");
     
     if (!_rewardsTokens.contains(rewardToken)) {
       _rewardsTokens.add(rewardToken);
+      require(_rewardsTokens.length() + _timeWeightedRewardsTokens.length() <= MAX_REWARDS_TOKENS, "Too many reward tokens");
     }
     
-    // Transfer reward tokens from caller to contract
-    TokensTransfer.transferTokens(rewardToken, _msgSender(), address(this), amount);
+    if (rewardToken == Constants.NATIVE_TOKEN) {
+      require(msg.value == amount, "Invalid msg.value");
+    }
+    else {
+      require(msg.value == 0, "Invalid msg.value");
+      TokensHelper.transferTokens(rewardToken, _msgSender(), address(this), amount);
+    }
     
-    // Update the reward rate for each token
     rewardsPerToken[rewardToken] = rewardsPerToken[rewardToken] + amount.mulDiv(1e36, supply);
     
     emit RewardsAdded(rewardToken, amount, false);
   }
 
   // Add time-weighted rewards
-  function addTimeWeightedRewards(address rewardToken, uint256 amount) external nonReentrant onlyVault {
+  function addTimeWeightedRewards(address rewardToken, uint256 amount) external payable override nonReentrant onlyVault {
     require(amount > 0, "Cannot add zero rewards");
-    require(_rewardsTokens.length() + _timeWeightedRewardsTokens.length() <= MAX_REWARDS_TOKENS, "Too many reward tokens");
     
     uint256 supply = _totalTimeWeightedBalance;
     require(supply > 0, "No time-weighted balance supply");
     
     if (!_timeWeightedRewardsTokens.contains(rewardToken)) {
       _timeWeightedRewardsTokens.add(rewardToken);
+      require(_rewardsTokens.length() + _timeWeightedRewardsTokens.length() <= MAX_REWARDS_TOKENS, "Too many reward tokens");
     }
     
-    // Transfer reward tokens from caller to contract
-    TokensTransfer.transferTokens(rewardToken, _msgSender(), address(this), amount);
+    if (rewardToken == Constants.NATIVE_TOKEN) {
+      require(msg.value == amount, "Invalid msg.value");
+    }
+    else {
+      require(msg.value == 0, "Invalid msg.value");
+      TokensHelper.transferTokens(rewardToken, _msgSender(), address(this), amount);
+    }
     
-    // Because time-weighting uses higher precision
     timeWeightedRewardsPerToken[rewardToken] = timeWeightedRewardsPerToken[rewardToken] + amount.mulDiv(1e36, supply);
     
     emit RewardsAdded(rewardToken, amount, true);
@@ -200,9 +202,7 @@ contract YieldToken is IYieldToken, ERC20, ReentrancyGuard {
     bool fromExcluded = excludedFromRewards(from);
     bool toExcluded = excludedFromRewards(to);
     
-    // Handle rewards for non-excluded addresses
     if (from != address(0) && !fromExcluded) {
-      // Update and collect rewards for the sender
       _updateRewards(from);
       _collectTimeWeightedBalance(from);
       _updateTimeWeightedRewards(from);
@@ -212,7 +212,6 @@ contract YieldToken is IYieldToken, ERC20, ReentrancyGuard {
     }
     
     if (to != address(0) && !toExcluded) {
-      // Update and collect rewards for the receiver
       _updateRewards(to);
       _collectTimeWeightedBalance(to);
       _updateTimeWeightedRewards(to);
@@ -221,7 +220,6 @@ contract YieldToken is IYieldToken, ERC20, ReentrancyGuard {
       _claimRewardsForUser(to);
     }
     
-    // Execute standard transfer operation
     super._update(from, to, value);
   }
   
@@ -233,7 +231,7 @@ contract YieldToken is IYieldToken, ERC20, ReentrancyGuard {
       uint256 reward = userRewards[user][rewardToken];
       if (reward > 0) {
         userRewards[user][rewardToken] = 0;
-        TokensTransfer.transferTokens(rewardToken, address(this), user, reward);
+        TokensHelper.transferTokens(rewardToken, address(this), user, reward);
         emit RewardPaid(user, rewardToken, reward, false);
       }
     }
@@ -244,7 +242,7 @@ contract YieldToken is IYieldToken, ERC20, ReentrancyGuard {
       uint256 reward = userTimeWeightedRewards[user][rewardToken];
       if (reward > 0) {
         userTimeWeightedRewards[user][rewardToken] = 0;
-        TokensTransfer.transferTokens(rewardToken, address(this), user, reward);
+        TokensHelper.transferTokens(rewardToken, address(this), user, reward);
         emit RewardPaid(user, rewardToken, reward, true);
       }
     }
@@ -276,7 +274,6 @@ contract YieldToken is IYieldToken, ERC20, ReentrancyGuard {
 
   // Collect time-weighted balance for a user
   function _collectTimeWeightedBalance(address user) internal {
-    // Excluded addresses don't accumulate time-weighted balance
     if (excludedFromRewards(user)) return;
     
     (uint256 collectTimestamp, uint256 deltaTimeWeightedAmount) = collectableTimeWeightedBalance(user);
@@ -295,6 +292,11 @@ contract YieldToken is IYieldToken, ERC20, ReentrancyGuard {
 
   modifier onlyVault() {
     require(_msgSender() == vault, "Caller is not the vault");
+    _;
+  }
+
+  modifier noneZeroAddress(address addr) {
+    require(addr != address(0), "Zero address detected");
     _;
   }
 

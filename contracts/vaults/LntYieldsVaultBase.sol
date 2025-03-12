@@ -3,6 +3,7 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import "@openzeppelin/contracts/utils/math/Math.sol";
 
 import "../interfaces/ILntYieldsVault.sol";
 import "../interfaces/INftStakingPool.sol";
@@ -18,6 +19,8 @@ abstract contract LntYieldsVaultBase is LntVaultBase, ILntYieldsVault {
   address public nftStakingPool;
 
   uint256 public totalWeightedDepositValue;
+
+  mapping(address => uint256) internal _pendingNftStakingRewards;
 
   constructor(address _treasury, address _nft) LntVaultBase(_treasury, _nft) {
 
@@ -73,7 +76,9 @@ abstract contract LntYieldsVaultBase is LntVaultBase, ILntYieldsVault {
     uint256 ytDecimals = IERC20Metadata(yt).decimals();
     uint256 ytInitAmount = totalWeightedDepositValue * (10 ** ytDecimals);
     IYieldToken(yt).mint(address(this), ytInitAmount);
-    IERC20(yt).approve(ytSwap, ytInitAmount);
+    IYieldToken(yt).approve(ytSwap, ytInitAmount);
+
+    IYieldToken(yt).setEpochEndTimestamp(_epochs[_currentEpochId].startTime + _epochs[_currentEpochId].duration);
 
     IYTSwap(ytSwap).initialize(
       yt, ytSwapPaymentToken, ytSwapPrice, 
@@ -81,31 +86,80 @@ abstract contract LntYieldsVaultBase is LntVaultBase, ILntYieldsVault {
     );
   }
 
-  function addNftStakingRewards(address rewardsToken, uint256 rewardsAmount) external nonReentrant onlyInitialized onlyYTSwap(_currentEpochId) {
+  function addNftStakingRewards(address rewardsToken, uint256 rewardsAmount) external override payable nonReentrant onlyInitialized onlyYTSwap(_currentEpochId) {
     require(rewardsAmount > 0, "Invalid rewards amount");
     require(rewardsToken != address(0), "Zero address detected");
 
-    IERC20(rewardsToken).transferFrom(_msgSender(), address(this), rewardsAmount);
-    IERC20(rewardsToken).approve(nftStakingPool, rewardsAmount);
-    INftStakingPool(nftStakingPool).addRewards(rewardsToken, rewardsAmount);
+    if (rewardsToken == Constants.NATIVE_TOKEN) {
+      require(msg.value == rewardsAmount, "Invalid msg.value");
+    }
+    else {
+      require(msg.value == 0, "Invalid msg.value");
+      TokensHelper.transferTokens(rewardsToken, _msgSender(), address(this), rewardsAmount);
+    }
+
+    if (INftStakingPool(nftStakingPool).totalSupply() == 0) {
+      _pendingNftStakingRewards[rewardsToken] += rewardsAmount;
+    }
+    else {
+      uint256 allStakingRewards = _pendingNftStakingRewards[rewardsToken] + rewardsAmount;
+      _pendingNftStakingRewards[rewardsToken] = 0;
+      uint256 balance = TokensHelper.balance(address(this), rewardsToken);
+      uint256 rewards = Math.min(allStakingRewards, balance);
+
+      if (rewardsToken == Constants.NATIVE_TOKEN) {
+        (bool success,) = address(nftStakingPool).call{value: rewards}(
+          abi.encodeWithSignature("addRewards(address rewardToken, uint256 amount)", rewardsToken, rewards)
+        );
+        require(success, "Add rewards failed");
+      }
+      else {
+        IERC20(rewardsToken).approve(nftStakingPool, rewards);
+        INftStakingPool(nftStakingPool).addRewards(rewardsToken, rewards);
+      }
+    }
   }
 
-  function addYTRewards(address rewardsToken, uint256 rewardsAmount) external nonReentrant onlyOwner onlyInitialized onlyValidEpochId(_currentEpochId) {
+  function addYTRewards(address rewardsToken, uint256 rewardsAmount) external override payable nonReentrant onlyOwner onlyInitialized onlyValidEpochId(_currentEpochId) {
     require(rewardsAmount > 0, "Invalid rewards amount");
+    require(rewardsToken != address(0), "Zero address detected");
 
     IYieldToken yt = IYieldToken(_epochs[_currentEpochId].yt);
-    TokensTransfer.transferTokens(rewardsToken, _msgSender(), address(this), rewardsAmount);
-    IERC20(rewardsToken).approve(address(yt), rewardsAmount);
-    yt.addRewards(rewardsToken, rewardsAmount);
+
+    if (rewardsToken == Constants.NATIVE_TOKEN) {
+      require(msg.value == rewardsAmount, "Invalid msg.value");
+      (bool success,) = address(yt).call{value: msg.value}(
+        abi.encodeWithSignature("addRewards(address rewardToken, uint256 amount)", rewardsToken, rewardsAmount)
+      );
+      require(success, "Add rewards failed");
+    }
+    else {
+      require(msg.value == 0, "Invalid msg.value");
+      TokensHelper.transferTokens(rewardsToken, _msgSender(), address(this), rewardsAmount);
+      IERC20(rewardsToken).approve(address(yt), rewardsAmount);
+      yt.addRewards(rewardsToken, rewardsAmount);
+    }
   }
 
-  function addYTTimeWeightedRewards(address rewardsToken, uint256 rewardsAmount) external nonReentrant onlyOwner onlyInitialized onlyValidEpochId(_currentEpochId) {
+  function addYTTimeWeightedRewards(address rewardsToken, uint256 rewardsAmount) external override payable nonReentrant onlyOwner onlyInitialized onlyValidEpochId(_currentEpochId) {
     require(rewardsAmount > 0, "Invalid rewards amount");
+    require(rewardsToken != address(0), "Zero address detected");
 
     IYieldToken yt = IYieldToken(_epochs[_currentEpochId].yt);
-    TokensTransfer.transferTokens(rewardsToken, _msgSender(), address(this), rewardsAmount);
-    IERC20(rewardsToken).approve(address(yt), rewardsAmount);
-    yt.addTimeWeightedRewards(rewardsToken, rewardsAmount);
+
+    if (rewardsToken == Constants.NATIVE_TOKEN) {
+      require(msg.value == rewardsAmount, "Invalid msg.value");
+      (bool success,) = address(yt).call{value: msg.value}(
+        abi.encodeWithSignature("addTimeWeightedRewards(address rewardToken, uint256 amount)", rewardsToken, rewardsAmount)
+      );
+      require(success, "Add time weighted rewards failed");
+    }
+    else {
+      require(msg.value == 0, "Invalid msg.value");
+      TokensHelper.transferTokens(rewardsToken, _msgSender(), address(this), rewardsAmount);
+      IERC20(rewardsToken).approve(address(yt), rewardsAmount);
+      yt.addTimeWeightedRewards(rewardsToken, rewardsAmount);
+    }
   }
 
 

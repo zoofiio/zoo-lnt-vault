@@ -99,7 +99,7 @@ contract LntVaultERC721 is LntVaultBase, ERC721Holder {
     remainingTime = Math.min(remainingTime, vestingDuration);
 
     uint256 vtAmount = vestingTokenAmountPerNft.mulDiv(remainingTime * value, vestingDuration);
-    uint256 fees = vtAmount.mulDiv(f1, 10 ** decimals);
+    uint256 fees = vtAmount.mulDiv(f1, 10 ** settingDecimals);
     uint256 vtNetAmount = vtAmount - fees;
     return (fees, vtNetAmount);
   }

@@ -79,7 +79,7 @@ contract LntYieldsVaultERC721 is LntYieldsVaultBase, ERC721Holder {
 
     totalWeightedDepositValue += value;
 
-    INftStakingPool(nftStakingPool).notifyNftDepositForUser(_msgSender(), tokenId, 1);
+    INftStakingPool(nftStakingPool).notifyNftDepositForUser(_msgSender(), tokenId, 1, 1);
   }
 
   function _redeem(uint256 tokenId, uint256 value, uint256 f1) internal override virtual {
@@ -95,7 +95,7 @@ contract LntYieldsVaultERC721 is LntYieldsVaultBase, ERC721Holder {
 
     totalWeightedDepositValue -= value;
 
-    INftStakingPool(nftStakingPool).notifyNftRedeemForUser(_msgSender(), tokenId, 1);
+    INftStakingPool(nftStakingPool).notifyNftRedeemForUser(_msgSender(), tokenId, 1, 1);
   }
 
   function _calcFeesAndNetAmount(uint256 value, uint256 f1) internal view returns (uint256, uint256) {
@@ -106,7 +106,7 @@ contract LntYieldsVaultERC721 is LntYieldsVaultBase, ERC721Holder {
     remainingTime = Math.min(remainingTime, vestingDuration);
 
     uint256 vtAmount = vestingTokenAmountPerNft.mulDiv(remainingTime * value, vestingDuration);
-    uint256 fees = vtAmount.mulDiv(f1, 10 ** decimals);
+    uint256 fees = vtAmount.mulDiv(f1, 10 ** settingDecimals);
     uint256 vtNetAmount = vtAmount - fees;
     return (fees, vtNetAmount);
   }

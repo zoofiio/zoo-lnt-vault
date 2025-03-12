@@ -23,10 +23,10 @@ interface ILntYieldsVault is ILntVault {
 
   function totalWeightedDepositValue() external view returns (uint256);
 
-  function addNftStakingRewards(address rewardsToken, uint256 rewardsAmount) external;
+  function addNftStakingRewards(address rewardsToken, uint256 rewardsAmount) external payable;
 
-  function addYTRewards(address rewardsToken, uint256 rewardsAmount) external;
+  function addYTRewards(address rewardsToken, uint256 rewardsAmount) external payable;
 
-  function addYTTimeWeightedRewards(address rewardsToken, uint256 rewardsAmount) external;
+  function addYTTimeWeightedRewards(address rewardsToken, uint256 rewardsAmount) external payable;
 
 }

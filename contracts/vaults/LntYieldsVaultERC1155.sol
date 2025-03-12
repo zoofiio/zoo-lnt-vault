@@ -78,7 +78,7 @@ contract LntVaultERC1155 is LntYieldsVaultBase, ERC1155Holder {
 
     totalWeightedDepositValue += value * _tokenVestingSchedule[tokenId].weight;
 
-    INftStakingPool(nftStakingPool).notifyNftDepositForUser(_msgSender(), tokenId, _tokenVestingSchedule[tokenId].weight);
+    INftStakingPool(nftStakingPool).notifyNftDepositForUser(_msgSender(), tokenId, value, _tokenVestingSchedule[tokenId].weight);
   }
 
   function _redeem(uint256 tokenId, uint256 value, uint256 f1) internal override virtual {
@@ -93,7 +93,7 @@ contract LntVaultERC1155 is LntYieldsVaultBase, ERC1155Holder {
 
     totalWeightedDepositValue -= value * _tokenVestingSchedule[tokenId].weight;
 
-    INftStakingPool(nftStakingPool).notifyNftRedeemForUser(_msgSender(), tokenId, _tokenVestingSchedule[tokenId].weight);
+    INftStakingPool(nftStakingPool).notifyNftRedeemForUser(_msgSender(), tokenId, value, _tokenVestingSchedule[tokenId].weight);
   }
 
   function _calcFeesAndNetAmount(uint256 tokenId, uint256 value, uint256 f1) internal view returns (uint256, uint256) {
@@ -110,7 +110,7 @@ contract LntVaultERC1155 is LntYieldsVaultBase, ERC1155Holder {
     remainingTime = Math.min(remainingTime, vestingDuration);
 
     uint256 vtAmount = vestingTokenAmountPerNft.mulDiv(remainingTime * value, vestingDuration);
-    uint256 fees = vtAmount.mulDiv(f1, 10 ** decimals);
+    uint256 fees = vtAmount.mulDiv(f1, 10 ** settingDecimals);
     uint256 vtNetAmount = vtAmount - fees;
     return (fees, vtNetAmount);
   }

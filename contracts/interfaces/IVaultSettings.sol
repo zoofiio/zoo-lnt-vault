@@ -17,7 +17,7 @@ interface IVaultSettings {
 
   function treasury() external view returns (address);
 
-  function decimals() external view returns (uint256);
+  function settingDecimals() external view returns (uint256);
 
   function isValidParam(bytes32 param, uint256 value) external view returns (bool);
 

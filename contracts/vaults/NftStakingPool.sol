@@ -9,9 +9,10 @@ import "@openzeppelin/contracts/utils/Context.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
-import "../libs/TokensTransfer.sol";
+import "../interfaces/INftStakingPool.sol";
+import "../libs/TokensHelper.sol";
 
-contract NftStakingPool is Context, ReentrancyGuard {
+contract NftStakingPool is INftStakingPool, Context, ReentrancyGuard {
   using Math for uint256;
   using EnumerableSet for EnumerableSet.AddressSet;
 
@@ -64,7 +65,7 @@ contract NftStakingPool is Context, ReentrancyGuard {
       uint256 rewards = userRewards[_msgSender()][rewardsToken];
       if (rewards > 0) {
         userRewards[_msgSender()][rewardsToken] = 0;
-        TokensTransfer.transferTokens(rewardsToken, address(this), _msgSender(), rewards);
+        TokensHelper.transferTokens(rewardsToken, address(this), _msgSender(), rewards);
         emit RewardsPaid(_msgSender(), rewardsToken, rewards);
       }
     }
@@ -72,7 +73,7 @@ contract NftStakingPool is Context, ReentrancyGuard {
 
   /* ========== RESTRICTED FUNCTIONS ========== */
 
-  function notifyNftDepositForUser(address user, uint256 tokenId, uint256 value, uint256 weight) external nonReentrant onlyVault updateAllRewards(user) {
+  function notifyNftDepositForUser(address user, uint256 tokenId, uint256 value, uint256 weight) external override nonReentrant onlyVault updateAllRewards(user) {
     require(user != address(0), "Invalid input");
 
     _totalSupply = _totalSupply + value * weight;
@@ -81,7 +82,7 @@ contract NftStakingPool is Context, ReentrancyGuard {
     emit NftDeposite(user, tokenId, value, weight);
   }
 
-  function notifyNftRedeemForUser(address user, uint256 tokenId, uint256 value, uint256 weight) external nonReentrant onlyVault updateAllRewards(user) {
+  function notifyNftRedeemForUser(address user, uint256 tokenId, uint256 value, uint256 weight) external override nonReentrant onlyVault updateAllRewards(user) {
     require(user != address(0), "Invalid input");
     require(_balances[user] > 0, "No NFT staked");
 
@@ -91,20 +92,26 @@ contract NftStakingPool is Context, ReentrancyGuard {
     emit NftRedeem(user, tokenId, value, weight);
   }
 
-  function addRewards(address rewardsToken, uint256 rewardsAmount) external nonReentrant onlyVault {
+  function addRewards(address rewardsToken, uint256 amount) external payable override nonReentrant onlyVault {
     require(_totalSupply > 0, "Cannot add rewards without YT staked");
-    require(rewardsAmount > 0, "Too small rewards amount");
+    require(amount > 0, "Too small rewards amount");
 
     if (!_rewardTokens.contains(rewardsToken)) {
       _rewardTokens.add(rewardsToken);
       emit RewardsTokenAdded(rewardsToken);
     }
 
-    TokensTransfer.transferTokens(rewardsToken, _msgSender(), address(this), rewardsAmount);
+    if (rewardsToken == Constants.NATIVE_TOKEN) {
+      require(msg.value == amount, "Invalid msg.value");
+    }
+    else {
+      require(msg.value == 0, "Invalid msg.value");
+      TokensHelper.transferTokens(rewardsToken, _msgSender(), address(this), amount);
+    }
 
-    rewardsPerNft[rewardsToken] = rewardsPerNft[rewardsToken] + rewardsAmount.mulDiv(1e18, _totalSupply);
+    rewardsPerNft[rewardsToken] = rewardsPerNft[rewardsToken] + amount.mulDiv(1e18, _totalSupply);
 
-    emit RewardsAdded(rewardsToken, rewardsAmount);
+    emit RewardsAdded(rewardsToken, amount);
   }
 
   /* ========== MODIFIERS ========== */
@@ -128,16 +135,5 @@ contract NftStakingPool is Context, ReentrancyGuard {
     userRewards[user][rewardsToken] = earned(user, rewardsToken);
     userRewardsPerNftPaid[user][rewardsToken] = rewardsPerNft[rewardsToken];
   }
-
-  /* ========== EVENTS ========== */
-
-  event RewardsTokenAdded(address indexed rewardsToken);
-
-  event NftDeposite(address indexed user, uint256 tokenId, uint256 value, uint256 weight);
-  event NftRedeem(address indexed user, uint256 tokenId, uint256 value, uint256 weight);
-
-  event RewardsAdded(address indexed rewardsToken, uint256 rewards);
-
-  event RewardsPaid(address indexed user, address indexed rewardsToken, uint256 rewards);
 
 }

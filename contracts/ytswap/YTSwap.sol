@@ -10,7 +10,7 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "../interfaces/ILntYieldsVault.sol";
 import "../interfaces/IYieldToken.sol";
 import "../interfaces/IYTSwap.sol";
-import "../libs/TokensTransfer.sol";
+import "../libs/TokensHelper.sol";
 
 contract YTSwap is Context, ReentrancyGuard, IYTSwap {
   using Math for uint256;
@@ -50,12 +50,11 @@ contract YTSwap is Context, ReentrancyGuard, IYTSwap {
 
     require(IERC20(YT).balanceOf(vault) > 0);
 
-    TokensTransfer.transferTokens(ytSwapPaymentToken, _msgSender(), address(this), paymentTokenAmount);
+    TokensHelper.transferTokens(ytSwapPaymentToken, _msgSender(), address(this), paymentTokenAmount);
 
-    ILntYieldsVault yieldsVault = ILntYieldsVault(vault);
-    uint256 fees = paymentTokenAmount * yieldsVault.paramValue("f2") / (10 ** yieldsVault.decimals());
+    uint256 fees = paymentTokenAmount * ILntYieldsVault(vault).paramValue("f2") / (10 ** ILntYieldsVault(vault).settingDecimals());
     if (fees > 0) {
-      TokensTransfer.transferTokens(ytSwapPaymentToken, address(this), yieldsVault.treasury(), fees);
+      TokensHelper.transferTokens(ytSwapPaymentToken, address(this), ILntYieldsVault(vault).treasury(), fees);
     }
     uint256 netAmount = paymentTokenAmount - fees;
 
@@ -65,16 +64,20 @@ contract YTSwap is Context, ReentrancyGuard, IYTSwap {
 
     uint256 yTokenAmount = m;
     require(IERC20(YT).balanceOf(vault) >= yTokenAmount, "Not enough yTokens");
-    TokensTransfer.transferTokens(YT, vault, _msgSender(), yTokenAmount);
+    TokensHelper.transferTokens(YT, vault, _msgSender(), yTokenAmount);
 
     emit Swap(_msgSender(), paymentTokenAmount, fees, yTokenAmount);
 
-    /**
-     * TODO:
-     * 1. ytSwapPaymentToken is native token
-     * 2. ytSwapPaymentToken.totalSupply() == 0?
-     */
-    yieldsVault.addNftStakingRewards(ytSwapPaymentToken, fees);
+    if (ytSwapPaymentToken == Constants.NATIVE_TOKEN) {
+      (bool success,) = vault.call{value: fees}(
+        abi.encodeWithSignature("addNftStakingRewards(address rewardsToken, uint256 rewardsAmount)", ytSwapPaymentToken, fees)
+      );
+      require(success, "Add rewards failed");
+    }
+    else {
+      IERC20(ytSwapPaymentToken).approve(vault, fees);
+      ILntYieldsVault(vault).addNftStakingRewards(ytSwapPaymentToken, fees);
+    }
   }
 
  

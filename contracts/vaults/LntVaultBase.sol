@@ -13,7 +13,7 @@ import "../interfaces/IVestingToken.sol";
 import "../interfaces/market/ILntMarketRouter.sol";
 import "../libs/Constants.sol";
 import "../libs/NftTypeChecker.sol";
-import "../libs/TokensTransfer.sol";
+import "../libs/TokensHelper.sol";
 import "./VaultSettings.sol";
 
 abstract contract LntVaultBase is ILntVault, ReentrancyGuard, VaultSettings, Ownable {
@@ -54,15 +54,6 @@ abstract contract LntVaultBase is ILntVault, ReentrancyGuard, VaultSettings, Own
 
   function userDeposits(address user) external view returns (uint256[] memory) {
     return _userDeposits[user].values();
-  }
-
-  function balanceOfT() public view onlyInitializedT returns (uint256) {
-    if (T == Constants.NATIVE_TOKEN) {
-      return address(this).balance;
-    }
-    else {
-      return IERC20(T).balanceOf(address(this));
-    }
   }
 
   /**
@@ -114,16 +105,16 @@ abstract contract LntVaultBase is ILntVault, ReentrancyGuard, VaultSettings, Own
   function redeemT(uint256 amount) external nonReentrant onlyInitialized onlyInitializedT noneZeroAmount(amount) {
     require(_vestingEnded(), "Vesting not ended");
     require(IERC20(VT).balanceOf(_msgSender()) >= amount, "Insufficient VT balance");
-    require(balanceOfT() >= amount, "Insufficient token balance");
+    require(TokensHelper.balance(address(this), T) >= amount, "Insufficient token balance");
 
     IVestingToken(VT).burn(_msgSender(), amount);
-    TokensTransfer.transferTokens(T, address(this), _msgSender(), amount);
+    TokensHelper.transferTokens(T, address(this), _msgSender(), amount);
 
     emit RedeemT(_msgSender(), amount);
   }
 
   function buyback(uint256 amount) external nonReentrant onlyOwner onlyInitialized onlyInitializedT noneZeroAmount(amount) {
-    require(balanceOfT() >= amount, "Insufficient token balance");
+    require(TokensHelper.balance(address(this), T) >= amount, "Insufficient token balance");
     uint256 prevBalanceVT = IERC20(VT).balanceOf(address(this));
     
     // Create a simple path array: [T, VT]
