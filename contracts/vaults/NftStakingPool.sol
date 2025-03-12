@@ -72,23 +72,23 @@ contract NftStakingPool is Context, ReentrancyGuard {
 
   /* ========== RESTRICTED FUNCTIONS ========== */
 
-  function notifyNftDepositForUser(address user, uint256 nftTokenId) external nonReentrant onlyVault updateAllRewards(user) {
+  function notifyNftDepositForUser(address user, uint256 tokenId, uint256 value, uint256 weight) external nonReentrant onlyVault updateAllRewards(user) {
     require(user != address(0), "Invalid input");
 
-    _totalSupply = _totalSupply + 1;
-    _balances[user] = _balances[user] + 1;
+    _totalSupply = _totalSupply + value * weight;
+    _balances[user] = _balances[user] + value * weight;
 
-    emit NftDeposite(user, nftTokenId);
+    emit NftDeposite(user, tokenId, value, weight);
   }
 
-  function notifyNftRedeemForUser(address user, uint256 nftTokenId) external nonReentrant onlyVault updateAllRewards(user) {
+  function notifyNftRedeemForUser(address user, uint256 tokenId, uint256 value, uint256 weight) external nonReentrant onlyVault updateAllRewards(user) {
     require(user != address(0), "Invalid input");
     require(_balances[user] > 0, "No NFT staked");
 
-    _totalSupply = _totalSupply - 1;
-    _balances[user] = _balances[user] - 1;
+    _totalSupply = _totalSupply - value * weight;
+    _balances[user] = _balances[user] - value * weight;
 
-    emit NftRedeem(user, nftTokenId);
+    emit NftRedeem(user, tokenId, value, weight);
   }
 
   function addRewards(address rewardsToken, uint256 rewardsAmount) external nonReentrant onlyVault {
@@ -133,8 +133,8 @@ contract NftStakingPool is Context, ReentrancyGuard {
 
   event RewardsTokenAdded(address indexed rewardsToken);
 
-  event NftDeposite(address indexed user, uint256 nftTokenId);
-  event NftRedeem(address indexed user, uint256 nftTokenId);
+  event NftDeposite(address indexed user, uint256 tokenId, uint256 value, uint256 weight);
+  event NftRedeem(address indexed user, uint256 tokenId, uint256 value, uint256 weight);
 
   event RewardsAdded(address indexed rewardsToken, uint256 rewards);
 

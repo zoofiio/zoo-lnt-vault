@@ -3,8 +3,10 @@ pragma solidity ^0.8.20;
 
 // import "hardhat/console.sol";
 
-import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
 import "../interfaces/ILntVault.sol";
 import "../interfaces/IProtocolSettings.sol";
@@ -13,34 +15,46 @@ import "../interfaces/market/ILntMarketRouter.sol";
 import "../libs/Constants.sol";
 import "../libs/NftTypeChecker.sol";
 import "../libs/TokensTransfer.sol";
-import "../settings/ProtocolOwner.sol";
+import "./VaultSettings.sol";
 
-abstract contract LntVaultBase is ILntVault, ReentrancyGuard, ProtocolOwner {
-  bool public initializedVT;
+abstract contract LntVaultBase is ILntVault, ReentrancyGuard, VaultSettings, Ownable {
+  using EnumerableSet for EnumerableSet.UintSet;
+
+  bool public initialized;
   bool public initializedT;
-  address public immutable settings;
 
   address public immutable NFT;
   Constants.NftType public immutable NFTType;
   address public VT;
   address public T;
+  address public lntMarketRouter;
+
+  uint256 internal _currentDepositId;
+  mapping(uint256 => DepositInfo) internal _depositsInfo;
+  mapping(address => EnumerableSet.UintSet) internal _userDeposits;
 
   constructor(
-    address _protocol, address _settings, address _nft
-  ) ProtocolOwner(_protocol) {
-    require(_settings != address(0) && _nft != address(0), "Zero address detected");
-
-    settings = _settings;
+    address _treasury, address _nft
+  ) Ownable (_msgSender()) VaultSettings(_treasury) {
+    require(_nft != address(0), "Zero address detected");
 
     NFT = _nft;
     NFTType = NftTypeChecker.getNftType(_nft);
     require(NFTType != Constants.NftType.UNKNOWN, "Invalid NFT");
   }
 
-   /* ================= VIEWS ================ */
+  /* ================= VIEWS ================ */
 
-  function paramValue(bytes32 param) public view returns (uint256) {
-    return IProtocolSettings(settings).vaultParamValue(address(this), param);
+  function depositCount() external view returns (uint256) {
+    return _currentDepositId;
+  }
+
+  function depositInfo(uint256 depositId) external view returns (DepositInfo memory) {
+    return _depositsInfo[depositId];
+  }
+
+  function userDeposits(address user) external view returns (uint256[] memory) {
+    return _userDeposits[user].values();
   }
 
   function balanceOfT() public view onlyInitializedT returns (uint256) {
@@ -52,27 +66,53 @@ abstract contract LntVaultBase is ILntVault, ReentrancyGuard, ProtocolOwner {
     }
   }
 
+  /**
+   * @dev See {IERC165-supportsInterface}.
+   */
+  function supportsInterface(bytes4 interfaceId) public view virtual override returns (bool) {
+    return interfaceId == type(ILntVault).interfaceId;
+  }
+
   /* ========== MUTATIVE FUNCTIONS ========== */
 
-  function deposit(address receiver, uint256 tokenId, uint256 value) external nonReentrant onlyInitializedVT {
-    require(receiver != address(0), "Zero address detected");
+  function deposit(uint256 tokenId, uint256 value) external nonReentrant onlyInitialized returns (uint256) {
     require(value > 0, "Invalid value");
 
-    _deposit(receiver, tokenId, value);
+    _currentDepositId++;
+    _depositsInfo[_currentDepositId] = DepositInfo({
+      depositId: _currentDepositId,
+      user: _msgSender(),
+      tokenId: tokenId,
+      value: value,
+      depositTime: block.timestamp,
+      redeemed: false,
+      f1OnDeposit : paramValue("f1")
+    });
+    _userDeposits[_msgSender()].add(_currentDepositId);
 
-    emit Deposit(_msgSender(), receiver, NFT, tokenId, value);
+    _deposit(tokenId, value);
+
+    emit Deposit(_currentDepositId, _msgSender(), NFT, tokenId, value);
+
+    return _currentDepositId;
   }
 
-  function redeem(address receiver, uint256 tokenId, uint256 value) external nonReentrant onlyInitializedVT {
-    require(receiver != address(0), "Zero address detected");
-    require(value > 0, "Invalid value");
+  function redeem(uint256 depositId, uint256 tokenId, uint256 value) external nonReentrant onlyInitialized {
+    DepositInfo storage _depositInfo = _depositsInfo[depositId];
+    require(depositId > 0 && _depositInfo.depositId == depositId, "Invalid depositId");
+    require(_depositInfo.user == _msgSender(), "Not owner of deposit");
+    require(!_depositInfo.redeemed, "Already redeemed");
+    require(_depositInfo.tokenId == tokenId, "Invalid tokenId");
+    require(value > 0 && _depositInfo.value == value, "Invalid value");
 
-    _redeem(receiver, tokenId, value);
+    _depositInfo.redeemed = true;
 
-    emit Redeem(_msgSender(), receiver, NFT, tokenId, value);
+    _redeem(tokenId, value, _depositInfo.f1OnDeposit);
+
+    emit Redeem(depositId, _msgSender(), NFT, tokenId, value);
   }
 
-  function redeemT(uint256 amount) external nonReentrant onlyInitializedVT onlyInitializedT noneZeroAmount(amount) {
+  function redeemT(uint256 amount) external nonReentrant onlyInitialized onlyInitializedT noneZeroAmount(amount) {
     require(_vestingEnded(), "Vesting not ended");
     require(IERC20(VT).balanceOf(_msgSender()) >= amount, "Insufficient VT balance");
     require(balanceOfT() >= amount, "Insufficient token balance");
@@ -83,9 +123,8 @@ abstract contract LntVaultBase is ILntVault, ReentrancyGuard, ProtocolOwner {
     emit RedeemT(_msgSender(), amount);
   }
 
-  function buyback(uint256 amount) external nonReentrant onlyOwner onlyInitializedVT onlyInitializedT noneZeroAmount(amount) {
+  function buyback(uint256 amount) external nonReentrant onlyOwner onlyInitialized onlyInitializedT noneZeroAmount(amount) {
     require(balanceOfT() >= amount, "Insufficient token balance");
-    ILntMarketRouter lntMarketRouter = ILntMarketRouter(IZooProtocol(protocol).lntMarketRouter());
     uint256 prevBalanceVT = IERC20(VT).balanceOf(address(this));
     
     // Create a simple path array: [T, VT]
@@ -99,7 +138,7 @@ abstract contract LntVaultBase is ILntVault, ReentrancyGuard, ProtocolOwner {
     // Handle based on token type
     if (T == Constants.NATIVE_TOKEN) {
       // For native token (ETH), use swapExactETHForTokens
-      lntMarketRouter.swapExactETHForTokensSupportingFeeOnTransferTokens{value: amount}(
+      ILntMarketRouter(lntMarketRouter).swapExactETHForTokensSupportingFeeOnTransferTokens{value: amount}(
         0, // Accept any amount of VT (we're not concerned with slippage in buyback)
         path,
         address(this), // Send VT tokens to this vault
@@ -111,7 +150,7 @@ abstract contract LntVaultBase is ILntVault, ReentrancyGuard, ProtocolOwner {
       IERC20(T).approve(address(lntMarketRouter), amount);
       
       // Perform the swap
-      lntMarketRouter.swapExactTokensForTokensSupportingFeeOnTransferTokens(
+      ILntMarketRouter(lntMarketRouter).swapExactTokensForTokensSupportingFeeOnTransferTokens(
         amount,
         0, // Accept any amount of VT (we're not concerned with slippage in buyback)
         path,
@@ -131,23 +170,20 @@ abstract contract LntVaultBase is ILntVault, ReentrancyGuard, ProtocolOwner {
 
   /* ========== INTERNAL FUNCTIONS ========== */
 
-  function _deposit(address receiver, uint256 tokenId, uint256 value) internal virtual;
+  function _deposit(uint256 tokenId, uint256 value) internal virtual;
 
-  function _redeem(address receiver, uint256 tokenId, uint256 value) internal virtual;
+  function _redeem(uint256 tokenId, uint256 value, uint256 f1) internal virtual;
 
   function _vestingEnded()  internal virtual returns (bool);
 
 
   /* ========== RESTRICTED FUNCTIONS ========== */
 
-  function initializeVT(address _VT) external nonReentrant onlyOwner {
-    require(_VT != address(0), "Zero address detected");
-
-    require(!initializedVT, "Already initialized");
-    initializedVT = true;
-  
+  function __LntVaultBase_init(address _lntMarketRouter, address _VT) internal onlyOwner {
+    require(_lntMarketRouter != address(0) && _VT != address(0), "Zero address detected");
+    
+    lntMarketRouter = _lntMarketRouter;
     VT = _VT;
-    emit InitializedVT(_VT);
   }
 
   function initializeT(address _T) external nonReentrant onlyOwner {
@@ -160,10 +196,29 @@ abstract contract LntVaultBase is ILntVault, ReentrancyGuard, ProtocolOwner {
     emit InitializedT(_T);
   }
 
+  function setTreasury(address newTreasury) external nonReentrant onlyOwner {
+    _setTreasury(newTreasury);
+  }
+
+  function upsertParamConfig(bytes32 param, uint256 defaultValue, uint256 min, uint256 max) external nonReentrant onlyOwner {
+    _upsertParamConfig(param, defaultValue, min, max);
+  }
+
+  function updateParamValue(bytes32 param, uint256 value) external nonReentrant onlyOwner {
+    _updateParamValue(param, value);
+  }
+
   /* ============== MODIFIERS =============== */
 
-  modifier onlyInitializedVT() {
-    require(initializedVT, "Not initialized VT");
+  modifier initializer() {
+    require(!initialized, "Already initialized");
+    _;
+    initialized = true;
+    emit Initialized();
+  }
+
+  modifier onlyInitialized() virtual {
+    require(initialized, "Not initialized");
     _;
   }
 
@@ -177,16 +232,10 @@ abstract contract LntVaultBase is ILntVault, ReentrancyGuard, ProtocolOwner {
     _;
   }
 
-  /**
-   * @dev See {IERC165-supportsInterface}.
-   */
-  function supportsInterface(bytes4 interfaceId) public view virtual override returns (bool) {
-    return interfaceId == type(ILntVault).interfaceId;
-  }
   
   /* =============== EVENTS ============= */
 
-  event InitializedVT(address indexed VT);
+  event Initialized();
   event InitializedT(address indexed T);
 
   event WithdrawT(address indexed caller, uint256 amount);

@@ -7,8 +7,8 @@ interface INftStakingPool {
 
   function addRewards(address rewardsToken, uint256 rewardsAmount) external;
 
-  function notifyNftDepositForUser(address user, uint256 nftTokenId) external;
+  function notifyNftDepositForUser(address user, uint256 tokenId, uint256 value) external;
 
-  function notifyNftRedeemForUser(address user, uint256 nftTokenId) external;
+  function notifyNftRedeemForUser(address user, uint256 tokenId, uint256 value) external;
 
 }

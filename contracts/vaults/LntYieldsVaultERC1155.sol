@@ -13,9 +13,9 @@ import "../interfaces/ILntVault.sol";
 import "../interfaces/IVestingToken.sol";
 import "../libs/Constants.sol";
 import "../libs/NftTypeChecker.sol";
-import "./LntVaultBase.sol";
+import "./LntYieldsVaultBase.sol";
 
-contract LntVaultERC1155 is LntVaultBase, ERC1155Holder {
+contract LntVaultERC1155 is LntYieldsVaultBase, ERC1155Holder {
   using Math for uint256;
   using EnumerableSet for EnumerableSet.UintSet;
 
@@ -25,7 +25,7 @@ contract LntVaultERC1155 is LntVaultBase, ERC1155Holder {
 
   constructor(
     address _treasury, address _nft
-  ) LntVaultBase(_treasury, _nft) {
+  ) LntYieldsVaultBase(_treasury, _nft) {
     require(NFTType == Constants.NftType.ERC1155, "Invalid NFT");
   }
 
@@ -38,7 +38,7 @@ contract LntVaultERC1155 is LntVaultBase, ERC1155Holder {
   /**
    * @dev See {IERC165-supportsInterface}.
    */
-  function supportsInterface(bytes4 interfaceId) public view virtual override(LntVaultBase, ERC1155Holder) returns (bool) {
+  function supportsInterface(bytes4 interfaceId) public view virtual override(LntYieldsVaultBase, ERC1155Holder) returns (bool) {
     return
       interfaceId == type(IERC1155Receiver).interfaceId ||
       super.supportsInterface(interfaceId);
@@ -75,6 +75,10 @@ contract LntVaultERC1155 is LntVaultBase, ERC1155Holder {
       IVestingToken(VT).mint(_msgSender(), vtNetAmount);
     }
     emit VTMinted(_msgSender(), fees, vtNetAmount);
+
+    totalWeightedDepositValue += value * _tokenVestingSchedule[tokenId].weight;
+
+    INftStakingPool(nftStakingPool).notifyNftDepositForUser(_msgSender(), tokenId, _tokenVestingSchedule[tokenId].weight);
   }
 
   function _redeem(uint256 tokenId, uint256 value, uint256 f1) internal override virtual {
@@ -86,6 +90,10 @@ contract LntVaultERC1155 is LntVaultBase, ERC1155Holder {
       IVestingToken(VT).burn(_msgSender(), vtBurnAmount);
     }
     emit VTBurned(_msgSender(), vtBurnAmount);
+
+    totalWeightedDepositValue -= value * _tokenVestingSchedule[tokenId].weight;
+
+    INftStakingPool(nftStakingPool).notifyNftRedeemForUser(_msgSender(), tokenId, _tokenVestingSchedule[tokenId].weight);
   }
 
   function _calcFeesAndNetAmount(uint256 tokenId, uint256 value, uint256 f1) internal view returns (uint256, uint256) {
@@ -109,8 +117,8 @@ contract LntVaultERC1155 is LntVaultBase, ERC1155Holder {
 
   /* ========== RESTRICTED FUNCTIONS ========== */
 
-  function initialize(address _lntMarketRouter, address _VT, VestingSchedule[] memory _vestingSchedules_) external nonReentrant initializer onlyOwner {
-    __LntVaultBase_init(_lntMarketRouter, _VT);
+  function initialize(address _lntMarketRouter, address _VT, address _nftStakingPool, VestingSchedule[] memory _vestingSchedules_) external nonReentrant initializer onlyOwner {
+    __LntYieldVaultBase_init(_lntMarketRouter, _VT, _nftStakingPool);
 
     require(_vestingSchedules_.length > 0, "Invalid vesting schedules");
     _vestingSchedules = _vestingSchedules_;
@@ -122,10 +130,5 @@ contract LntVaultERC1155 is LntVaultBase, ERC1155Holder {
       _tokenVestingSchedule[schedule.tokenId] = schedule;
     }
   }
-
-  /* ============== MODIFIERS =============== */
-
-  
-  /* =============== EVENTS ============= */
 
 }

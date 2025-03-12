@@ -6,10 +6,11 @@ import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
+import "../interfaces/IYieldToken.sol";
 import "../libs/TokensTransfer.sol";
 import "../settings/ProtocolOwner.sol";
 
-contract YieldToken is ERC20, ProtocolOwner, ReentrancyGuard {
+contract YieldToken is IYieldToken, ERC20, ProtocolOwner, ReentrancyGuard {
   using Math for uint256;
   using EnumerableSet for EnumerableSet.AddressSet;
 
@@ -142,14 +143,18 @@ contract YieldToken is ERC20, ProtocolOwner, ReentrancyGuard {
 
   /* ========== RESTRICTED FUNCTIONS ========== */
 
-  function setEpochEndTimestamp(uint256 _epochEndTimestamp) external onlyVault {
+  function mint(address to, uint256 amount) external nonReentrant onlyVault {
+    _mint(to, amount);
+  }
+
+  function setEpochEndTimestamp(uint256 _epochEndTimestamp) external nonReentrant onlyVault {
     require(_epochEndTimestamp >= block.timestamp, "Invalid epoch end timestamp");
     epochEndTimestamp = _epochEndTimestamp;
     emit EpochEndTimestampUpdated(_epochEndTimestamp);
   }
 
   // Add standard rewards
-  function addRewards(address rewardToken, uint256 amount) external onlyVault nonReentrant {
+  function addRewards(address rewardToken, uint256 amount) external nonReentrant onlyVault {
     require(amount > 0, "Cannot add zero rewards");
     require(_rewardsTokens.length() + _timeWeightedRewardsTokens.length() <= MAX_REWARDS_TOKENS, "Too many reward tokens");
     
@@ -170,7 +175,7 @@ contract YieldToken is ERC20, ProtocolOwner, ReentrancyGuard {
   }
 
   // Add time-weighted rewards
-  function addTimeWeightedRewards(address rewardToken, uint256 amount) external onlyVault nonReentrant {
+  function addTimeWeightedRewards(address rewardToken, uint256 amount) external nonReentrant onlyVault {
     require(amount > 0, "Cannot add zero rewards");
     require(_rewardsTokens.length() + _timeWeightedRewardsTokens.length() <= MAX_REWARDS_TOKENS, "Too many reward tokens");
     

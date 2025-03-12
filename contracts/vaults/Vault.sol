@@ -403,7 +403,7 @@ contract Vault is IVault, ReentrancyGuard, ProtocolOwner {
 
     _claimedNftDeposits.add(nftTokenId);
 
-    INftStakingPool(nftStakingPool).notifyNftDepositForUser(_msgSender(), nftTokenId);
+    INftStakingPool(nftStakingPool).notifyNftDepositForUser(_msgSender(), nftTokenId, 1);
   }
 
   function _redeemNft(uint256 nftTokenId) internal onlyInitialized onlyValidEpochId(_currentEpochId) onlyDepositedNft(nftTokenId) {
@@ -437,7 +437,7 @@ contract Vault is IVault, ReentrancyGuard, ProtocolOwner {
     }
     emit VTokenBurned(_msgSender(), nftTokenId, vtBurnAmount);
 
-    INftStakingPool(nftStakingPool).notifyNftRedeemForUser(_msgSender(), nftTokenId);
+    INftStakingPool(nftStakingPool).notifyNftRedeemForUser(_msgSender(), nftTokenId, 1);
   }
 
   function _claimRedeemNft(uint256 nftTokenId) internal onlyInitialized onlyRedeemedNft(nftTokenId) {

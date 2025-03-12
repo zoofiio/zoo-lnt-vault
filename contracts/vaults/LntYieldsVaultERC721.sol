@@ -9,22 +9,20 @@ import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 import "../interfaces/ILntVault.sol";
+import "../interfaces/INftStakingPool.sol";
 import "../interfaces/IVestingToken.sol";
 import "../libs/Constants.sol";
 import "../libs/NftTypeChecker.sol";
-import "../settings/ProtocolOwner.sol";
-import "./LntVaultBase.sol";
+import "./LntYieldsVaultBase.sol";
 
-contract LntVaultERC721 is LntVaultBase, ERC721Holder {
+contract LntYieldsVaultERC721 is LntYieldsVaultBase, ERC721Holder {
   using Math for uint256;
 
   uint256 public vestingTokenAmountPerNft;
   uint256 public vestingStartTime;
   uint256 public vestingDuration;
 
-  constructor(
-    address _treasury, address _nft
-  ) LntVaultBase(_treasury, _nft) {
+  constructor(address _treasury, address _nft) LntYieldsVaultBase(_treasury, _nft) {
     require(NFTType == Constants.NftType.ERC721, "Invalid NFT");
   }
 
@@ -45,7 +43,7 @@ contract LntVaultERC721 is LntVaultBase, ERC721Holder {
   /**
    * @dev See {IERC165-supportsInterface}.
    */
-  function supportsInterface(bytes4 interfaceId) public view virtual override(LntVaultBase) returns (bool) {
+  function supportsInterface(bytes4 interfaceId) public view virtual override(LntYieldsVaultBase) returns (bool) {
     return
       interfaceId == type(IERC721Receiver).interfaceId ||
       super.supportsInterface(interfaceId);
@@ -78,6 +76,10 @@ contract LntVaultERC721 is LntVaultBase, ERC721Holder {
       IVestingToken(VT).mint(_msgSender(), vtNetAmount);
     }
     emit VTMinted(_msgSender(), fees, vtNetAmount);
+
+    totalWeightedDepositValue += value;
+
+    INftStakingPool(nftStakingPool).notifyNftDepositForUser(_msgSender(), tokenId, 1);
   }
 
   function _redeem(uint256 tokenId, uint256 value, uint256 f1) internal override virtual {
@@ -90,6 +92,10 @@ contract LntVaultERC721 is LntVaultBase, ERC721Holder {
       IVestingToken(VT).burn(_msgSender(), vtBurnAmount);
     }
     emit VTBurned(_msgSender(), vtBurnAmount);
+
+    totalWeightedDepositValue -= value;
+
+    INftStakingPool(nftStakingPool).notifyNftRedeemForUser(_msgSender(), tokenId, 1);
   }
 
   function _calcFeesAndNetAmount(uint256 value, uint256 f1) internal view returns (uint256, uint256) {
@@ -108,18 +114,16 @@ contract LntVaultERC721 is LntVaultBase, ERC721Holder {
 
   /* ========== RESTRICTED FUNCTIONS ========== */
 
-  function initialize(address _lntMarketRouter, address _VT, uint256 _vestingTokenAmountPerNft, uint256 _vestingStartTime, uint256 _vestingDuration) external nonReentrant initializer onlyOwner {
-    __LntVaultBase_init(_lntMarketRouter, _VT);
+  function initialize(
+    address _lntMarketRouter, address _VT, address _nftStakingPool,
+    uint256 _vestingTokenAmountPerNft, uint256 _vestingStartTime, uint256 _vestingDuration
+  ) external nonReentrant initializer onlyOwner {
+    __LntYieldVaultBase_init(_lntMarketRouter, _VT, _nftStakingPool);
 
     require(_vestingTokenAmountPerNft > 0 && _vestingStartTime > 0 && _vestingDuration > 0, "Invalid parameters");
     vestingTokenAmountPerNft = _vestingTokenAmountPerNft;
     vestingStartTime = _vestingStartTime;
     vestingDuration = _vestingDuration;
   }
-
-  /* ============== MODIFIERS =============== */
-
-  
-  /* =============== EVENTS ============= */
 
 }
