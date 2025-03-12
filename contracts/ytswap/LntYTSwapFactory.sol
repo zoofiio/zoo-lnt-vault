@@ -3,7 +3,7 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
-import "./yt/YTSwap.sol";
+import "./YTSwap.sol";
 
 contract LntYTSwapFactory is ReentrancyGuard {
 

@@ -8,9 +8,8 @@ import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
 import "../interfaces/IYieldToken.sol";
 import "../libs/TokensTransfer.sol";
-import "../settings/ProtocolOwner.sol";
 
-contract YieldToken is IYieldToken, ERC20, ProtocolOwner, ReentrancyGuard {
+contract YieldToken is IYieldToken, ERC20, ReentrancyGuard {
   using Math for uint256;
   using EnumerableSet for EnumerableSet.AddressSet;
 
@@ -42,9 +41,8 @@ contract YieldToken is IYieldToken, ERC20, ProtocolOwner, ReentrancyGuard {
   constructor(
     string memory name,
     string memory symbol,
-    address _protocol,
     address _vault
-  ) ERC20(name, symbol) ProtocolOwner(_protocol) {
+  ) ERC20(name, symbol) {
     require(_vault != address(0), "Zero vault address");
     vault = _vault;
     epochEndTimestamp = type(uint256).max;
@@ -195,15 +193,6 @@ contract YieldToken is IYieldToken, ERC20, ProtocolOwner, ReentrancyGuard {
     emit RewardsAdded(rewardToken, amount, true);
   }
   
-  // Set the maximum number of reward tokens allowed
-  function setMaxRewardsTokens(uint256 _maxRewardsTokens) external onlyOwner {
-    require(_maxRewardsTokens >= _rewardsTokens.length() + _timeWeightedRewardsTokens.length(), "Cannot set max lower than current token count");
-    require(_maxRewardsTokens <= 30, "Max rewards tokens cannot exceed 30");
-    MAX_REWARDS_TOKENS = _maxRewardsTokens;
-    
-    emit MaxRewardsTokensUpdated(_maxRewardsTokens);
-  }
-
   /* ========== INTERNAL FUNCTIONS ========== */
 
   // Automatically settle rewards for both users during transfers
@@ -309,11 +298,4 @@ contract YieldToken is IYieldToken, ERC20, ProtocolOwner, ReentrancyGuard {
     _;
   }
 
-  /* ========== EVENTS ========== */
-
-  event EpochEndTimestampUpdated(uint256 newEpochEndTimestamp);
-  event RewardsAdded(address indexed rewardToken, uint256 amount, bool isTimeWeighted);
-  event RewardPaid(address indexed user, address indexed rewardToken, uint256 amount, bool isTimeWeighted);
-  event TimeWeightedBalanceAdded(address indexed user, uint256 amount);
-  event MaxRewardsTokensUpdated(uint256 newMaxRewardsTokens);
 }

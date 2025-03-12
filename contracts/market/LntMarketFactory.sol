@@ -1,25 +1,21 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.20;
 
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
-import "../interfaces/IProtocolSettings.sol";
 import "../interfaces/market/ILntMarketFactory.sol";
 import "./LntMarket.sol";
 
-contract LntMarketFactory is ILntMarketFactory, ReentrancyGuard {
-  address public immutable settings;
-
+contract LntMarketFactory is ILntMarketFactory, Ownable, ReentrancyGuard {
   mapping(address => mapping(address => address)) public getPair;
   address[] public allPairs;
 
-  constructor(address _settings) {
-    require(_settings != address(0), "Zero address detected");
-    settings = _settings;
-  }
+  address public feeTo;
 
-  function feeTo() external view returns (address) {
-    return IProtocolSettings(settings).treasury();
+  constructor(address _feeTo) Ownable(_msgSender()) {
+    require(_feeTo != address(0), "Zero address detected");
+    feeTo = _feeTo;
   }
 
   function allPairsLength() external view returns (uint) {
@@ -45,5 +41,11 @@ contract LntMarketFactory is ILntMarketFactory, ReentrancyGuard {
     allPairs.push(pair);
     
     emit PairCreated(token0, token1, pair, allPairs.length);
+  }
+
+  function setFeeTo(address _feeTo) external onlyOwner {
+    require(_feeTo != address(0), "Zero address detected");
+    feeTo = _feeTo;
+    emit FeeToSet(_feeTo);
   }
 }

@@ -9,7 +9,6 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
 import "../interfaces/ILntVault.sol";
-import "../interfaces/IProtocolSettings.sol";
 import "../interfaces/IVestingToken.sol";
 import "../interfaces/market/ILntMarketRouter.sol";
 import "../libs/Constants.sol";

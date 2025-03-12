@@ -5,14 +5,8 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 import "./NftStakingPool.sol";
 import "../interfaces/INftStakingPoolFactory.sol";
-import "../interfaces/IZooProtocol.sol";
-import "../settings/ProtocolOwner.sol";
 
-contract NftStakingPoolFactory is INftStakingPoolFactory, ReentrancyGuard, ProtocolOwner {
-
-  constructor(
-    address _protocol
-  ) ProtocolOwner(_protocol) { }
+contract NftStakingPoolFactory is INftStakingPoolFactory, ReentrancyGuard {
 
   function createNftStakingPool(
     address _vault

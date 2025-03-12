@@ -12,7 +12,6 @@ import "../interfaces/ILntVault.sol";
 import "../interfaces/IVestingToken.sol";
 import "../libs/Constants.sol";
 import "../libs/NftTypeChecker.sol";
-import "../settings/ProtocolOwner.sol";
 import "./LntVaultBase.sol";
 
 contract LntVaultERC721 is LntVaultBase, ERC721Holder {

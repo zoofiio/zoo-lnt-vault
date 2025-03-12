@@ -3,8 +3,8 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
-import "./tokens/VestingToken.sol";
-import "./interfaces/ILntVault.sol";
+import "./VestingToken.sol";
+import "../interfaces/ILntVault.sol";
 
 contract LntVTFactory is ReentrancyGuard {
 

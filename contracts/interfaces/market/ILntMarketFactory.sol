@@ -3,6 +3,7 @@ pragma solidity ^0.8.20;
 
 interface ILntMarketFactory {
   event PairCreated(address indexed token0, address indexed token1, address pair, uint);
+  event FeeToSet(address indexed feeTo);
 
   function feeTo() external view returns (address);
 
