@@ -33,8 +33,8 @@ abstract contract LntVaultBase is ILntVault, ReentrancyGuard, VaultSettings, Own
   mapping(address => EnumerableSet.UintSet) internal _userDeposits;
 
   constructor(
-    address _treasury, address _nft
-  ) Ownable (_msgSender()) VaultSettings(_treasury) {
+    address _owner, address _treasury, address _nft
+  ) Ownable(_owner) VaultSettings(_treasury) {
     require(_nft != address(0), "Zero address detected");
 
     NFT = _nft;

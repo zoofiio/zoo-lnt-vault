@@ -13,10 +13,7 @@ contract LntMarketFactory is ILntMarketFactory, Ownable, ReentrancyGuard {
 
   address public feeTo;
 
-  constructor(address _feeTo) Ownable(_msgSender()) {
-    require(_feeTo != address(0), "Zero address detected");
-    feeTo = _feeTo;
-  }
+  constructor() Ownable(_msgSender()) {}
 
   function allPairsLength() external view returns (uint) {
     return allPairs.length;
@@ -44,7 +41,6 @@ contract LntMarketFactory is ILntMarketFactory, Ownable, ReentrancyGuard {
   }
 
   function setFeeTo(address _feeTo) external onlyOwner {
-    require(_feeTo != address(0), "Zero address detected");
     feeTo = _feeTo;
     emit FeeToSet(_feeTo);
   }

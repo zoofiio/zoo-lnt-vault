@@ -201,6 +201,10 @@ contract YieldToken is IYieldToken, ERC20, ReentrancyGuard {
   function _update(address from, address to, uint256 value) internal override {
     bool fromExcluded = excludedFromRewards(from);
     bool toExcluded = excludedFromRewards(to);
+
+    if (from != address(0)) {
+      require(to != vault, "Cannot transfer to vault");
+    }
     
     if (from != address(0) && !fromExcluded) {
       _updateRewards(from);

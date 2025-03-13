@@ -22,8 +22,8 @@ contract LntVaultERC721 is LntVaultBase, ERC721Holder {
   uint256 public vestingDuration;
 
   constructor(
-    address _treasury, address _nft
-  ) LntVaultBase(_treasury, _nft) {
+    address _owner, address _treasury, address _nft
+  ) LntVaultBase(_owner, _treasury, _nft) {
     require(NFTType == Constants.NftType.ERC721, "Invalid NFT");
   }
 

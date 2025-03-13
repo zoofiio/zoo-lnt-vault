@@ -22,7 +22,7 @@ abstract contract LntYieldsVaultBase is LntVaultBase, ILntYieldsVault {
 
   mapping(address => uint256) internal _pendingNftStakingRewards;
 
-  constructor(address _treasury, address _nft) LntVaultBase(_treasury, _nft) {
+  constructor(address _owner, address _treasury, address _nft) LntVaultBase(_owner, _treasury, _nft) {
 
   }
 

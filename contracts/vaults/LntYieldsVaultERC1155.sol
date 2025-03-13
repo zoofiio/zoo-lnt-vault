@@ -24,8 +24,8 @@ contract LntVaultERC1155 is LntYieldsVaultBase, ERC1155Holder {
   mapping(uint256 => VestingSchedule) internal _tokenVestingSchedule;
 
   constructor(
-    address _treasury, address _nft
-  ) LntYieldsVaultBase(_treasury, _nft) {
+    address _owner, address _treasury, address _nft
+  ) LntYieldsVaultBase(_owner, _treasury, _nft) {
     require(NFTType == Constants.NftType.ERC1155, "Invalid NFT");
   }
 
