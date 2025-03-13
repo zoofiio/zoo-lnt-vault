@@ -44,9 +44,6 @@ contract LntVaultERC1155 is LntYieldsVaultBase, ERC1155Holder {
       super.supportsInterface(interfaceId);
   }
   
-  /* ========== MUTATIVE FUNCTIONS ========== */
-
-  
 
   /* ========== INTERNAL FUNCTIONS ========== */
 

@@ -69,10 +69,7 @@ contract YTSwap is Context, ReentrancyGuard, IYTSwap {
     emit Swap(_msgSender(), paymentTokenAmount, fees, yTokenAmount);
 
     if (ytSwapPaymentToken == Constants.NATIVE_TOKEN) {
-      (bool success,) = vault.call{value: fees}(
-        abi.encodeWithSignature("addNftStakingRewards(address rewardsToken, uint256 rewardsAmount)", ytSwapPaymentToken, fees)
-      );
-      require(success, "Add rewards failed");
+      ILntYieldsVault(vault).addNftStakingRewards{value: fees}(ytSwapPaymentToken, fees);
     }
     else {
       IERC20(ytSwapPaymentToken).approve(vault, fees);

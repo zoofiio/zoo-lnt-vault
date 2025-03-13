@@ -50,9 +50,6 @@ contract LntVaultERC721 is LntVaultBase, ERC721Holder {
       super.supportsInterface(interfaceId);
   }
   
-  /* ========== MUTATIVE FUNCTIONS ========== */
-
-  
 
   /* ========== INTERNAL FUNCTIONS ========== */
 
@@ -115,10 +112,5 @@ contract LntVaultERC721 is LntVaultBase, ERC721Holder {
     vestingStartTime = _vestingStartTime;
     vestingDuration = _vestingDuration;
   }
-
-  /* ============== MODIFIERS =============== */
-
-  
-  /* =============== EVENTS ============= */
 
 }

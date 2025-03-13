@@ -44,9 +44,6 @@ contract LntVaultERC1155 is LntVaultBase, ERC1155Holder {
       super.supportsInterface(interfaceId);
   }
   
-  /* ========== MUTATIVE FUNCTIONS ========== */
-
-  
 
   /* ========== INTERNAL FUNCTIONS ========== */
 
@@ -122,10 +119,5 @@ contract LntVaultERC1155 is LntVaultBase, ERC1155Holder {
       _tokenVestingSchedule[schedule.tokenId] = schedule;
     }
   }
-
-  /* ============== MODIFIERS =============== */
-
-  
-  /* =============== EVENTS ============= */
 
 }

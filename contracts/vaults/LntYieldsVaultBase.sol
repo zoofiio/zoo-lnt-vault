@@ -108,10 +108,7 @@ abstract contract LntYieldsVaultBase is LntVaultBase, ILntYieldsVault {
       uint256 rewards = Math.min(allStakingRewards, balance);
 
       if (rewardsToken == Constants.NATIVE_TOKEN) {
-        (bool success,) = address(nftStakingPool).call{value: rewards}(
-          abi.encodeWithSignature("addRewards(address rewardToken, uint256 amount)", rewardsToken, rewards)
-        );
-        require(success, "Add rewards failed");
+        INftStakingPool(nftStakingPool).addRewards{value: rewards}(rewardsToken, rewards);
       }
       else {
         IERC20(rewardsToken).approve(nftStakingPool, rewards);
@@ -128,10 +125,7 @@ abstract contract LntYieldsVaultBase is LntVaultBase, ILntYieldsVault {
 
     if (rewardsToken == Constants.NATIVE_TOKEN) {
       require(msg.value == rewardsAmount, "Invalid msg.value");
-      (bool success,) = address(yt).call{value: msg.value}(
-        abi.encodeWithSignature("addRewards(address rewardToken, uint256 amount)", rewardsToken, rewardsAmount)
-      );
-      require(success, "Add rewards failed");
+      yt.addRewards{value: msg.value}(rewardsToken, rewardsAmount);
     }
     else {
       require(msg.value == 0, "Invalid msg.value");
@@ -149,10 +143,7 @@ abstract contract LntYieldsVaultBase is LntVaultBase, ILntYieldsVault {
 
     if (rewardsToken == Constants.NATIVE_TOKEN) {
       require(msg.value == rewardsAmount, "Invalid msg.value");
-      (bool success,) = address(yt).call{value: msg.value}(
-        abi.encodeWithSignature("addTimeWeightedRewards(address rewardToken, uint256 amount)", rewardsToken, rewardsAmount)
-      );
-      require(success, "Add time weighted rewards failed");
+      yt.addTimeWeightedRewards{value: msg.value}(rewardsToken, rewardsAmount);
     }
     else {
       require(msg.value == 0, "Invalid msg.value");
