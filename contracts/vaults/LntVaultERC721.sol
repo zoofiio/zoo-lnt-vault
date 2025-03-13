@@ -53,7 +53,7 @@ contract LntVaultERC721 is LntVaultBase, ERC721Holder {
 
   /* ========== INTERNAL FUNCTIONS ========== */
 
-  function _vestingEnded()  internal override virtual returns (bool) {
+  function _vestingEnded() internal override virtual returns (bool) {
     return block.timestamp >= vestingStartTime + vestingDuration;
   }
 

@@ -42,6 +42,8 @@ abstract contract LntVaultBase is ILntVault, ReentrancyGuard, VaultSettings, Own
     require(NFTType != Constants.NftType.UNKNOWN, "Invalid NFT");
   }
 
+  receive() external payable {}
+
   /* ================= VIEWS ================ */
 
   function depositCount() external view returns (uint256) {
@@ -90,7 +92,7 @@ abstract contract LntVaultBase is ILntVault, ReentrancyGuard, VaultSettings, Own
   function redeem(uint256 depositId, uint256 tokenId, uint256 value) external nonReentrant onlyInitialized {
     DepositInfo storage _depositInfo = _depositsInfo[depositId];
     require(depositId > 0 && _depositInfo.depositId == depositId, "Invalid depositId");
-    require(_depositInfo.user == _msgSender(), "Not owner of deposit");
+    require(_depositInfo.user == _msgSender(), "Not user of deposit");
     require(!_depositInfo.redeemed, "Already redeemed");
     require(_depositInfo.tokenId == tokenId, "Invalid tokenId");
     require(value > 0 && _depositInfo.value == value, "Invalid value");
@@ -221,7 +223,6 @@ abstract contract LntVaultBase is ILntVault, ReentrancyGuard, VaultSettings, Own
     require(amount > 0, "Amount must be greater than 0");
     _;
   }
-
   
   /* =============== EVENTS ============= */
 
