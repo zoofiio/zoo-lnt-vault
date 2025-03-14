@@ -16,7 +16,7 @@ import "../libs/Constants.sol";
 import "../libs/NftTypeChecker.sol";
 import "./LntYieldsVaultBase.sol";
 
-contract LntVaultERC1155 is LntYieldsVaultBase, ERC1155Holder {
+contract LntYieldsVaultERC1155 is LntYieldsVaultBase, ERC1155Holder {
   using Math for uint256;
   using EnumerableSet for EnumerableSet.UintSet;
 
