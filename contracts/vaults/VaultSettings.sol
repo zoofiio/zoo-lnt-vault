@@ -12,7 +12,6 @@ import "../libs/Constants.sol";
 abstract contract VaultSettings is IVaultSettings, ReentrancyGuard {
   using EnumerableSet for EnumerableSet.Bytes32Set;
 
-  address public treasury;
   uint256 public constant settingDecimals = Constants.PROTOCOL_DECIMALS;
 
   EnumerableSet.Bytes32Set internal _paramsSet;
@@ -21,9 +20,7 @@ abstract contract VaultSettings is IVaultSettings, ReentrancyGuard {
   mapping(bytes32 => bool) internal _vaultParamsSet;
   mapping(bytes32 => uint256) internal _vaultParams;
 
-  constructor(address _treasury_) {
-    treasury = _treasury_;
-
+  constructor() {
     // Epoch duration. Default to 30 days, [1 hour, 5 year]
     _upsertParamConfig("D", 30 days, 1 hours, 1825 days);
 
@@ -74,15 +71,6 @@ abstract contract VaultSettings is IVaultSettings, ReentrancyGuard {
   }
 
   /* ============ INTERNAL FUNCTIONS =========== */
-
-  function _setTreasury(address newTreasury) internal {
-    require(newTreasury != address(0), "Zero address detected");
-    require(newTreasury != treasury, "Same treasury");
-
-    address prevTreasury = treasury;
-    treasury = newTreasury;
-    emit UpdateTreasury(prevTreasury, treasury);
-  }
 
   function _upsertParamConfig(bytes32 param, uint256 defaultValue, uint256 min, uint256 max) internal {
     require(param.length > 0, "Empty param name");

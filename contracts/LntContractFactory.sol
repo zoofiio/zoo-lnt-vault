@@ -1,11 +1,22 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.20;
 
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
-contract LntContractFactory is ReentrancyGuard {
+import "./interfaces/ILntContractFactory.sol";
 
-  // Generic method to deploy any contract with provided creation code and constructor arguments
+contract LntContractFactory is ILntContractFactory, Ownable, ReentrancyGuard {
+
+  address public treasury;
+
+  constructor(address _treasury) Ownable(_msgSender()) {
+    require(_treasury != address(0), "Zero address detected");
+    treasury = _treasury;
+  }
+
+  /* ========== MUTATIVE FUNCTIONS ========== */
+
   function deployContract(
     bytes memory creationCode,
     bytes memory constructorArgs
@@ -21,7 +32,16 @@ contract LntContractFactory is ReentrancyGuard {
     emit ContractDeployed(msg.sender, addr);
     return addr;
   }
+
+  /* ========== RESTRICTED FUNCTIONS ========== */
+
+  function setTreasury(address newTreasury) external nonReentrant onlyOwner {
+    require(newTreasury != address(0), "Zero address detected");
+    require(newTreasury != treasury, "Same treasury");
+
+    address prevTreasury = treasury;
+    treasury = newTreasury;
+    emit UpdateTreasury(prevTreasury, treasury);
+  }
   
-  // Events
-  event ContractDeployed(address indexed deployer, address indexed contractAddress);
 }

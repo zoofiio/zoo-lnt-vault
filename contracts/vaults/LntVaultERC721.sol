@@ -8,6 +8,7 @@ import "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
+import "../interfaces/ILntContractFactory.sol";
 import "../interfaces/ILntVault.sol";
 import "../interfaces/IVestingToken.sol";
 import "../libs/Constants.sol";
@@ -21,10 +22,8 @@ contract LntVaultERC721 is LntVaultBase, ERC721Holder {
   uint256 public vestingStartTime;
   uint256 public vestingDuration;
 
-  constructor(
-    address _owner, address _treasury, address _nft
-  ) LntVaultBase(_owner, _treasury, _nft) {
-    require(NFTType == Constants.NftType.ERC721, "Invalid NFT");
+  constructor(address _owner) LntVaultBase(_owner) {
+    
   }
 
   /* ================= VIEWS ================ */
@@ -68,7 +67,7 @@ contract LntVaultERC721 is LntVaultBase, ERC721Holder {
     (fees, vtNetAmount) = _calcFeesAndNetAmount(value, paramValue("f1"));
 
     if (fees > 0) {
-      IVestingToken(VT).mint(treasury, fees);
+      IVestingToken(VT).mint(ILntContractFactory(factory).treasury(), fees);
     }
     if (vtNetAmount > 0) {
       IVestingToken(VT).mint(_msgSender(), vtNetAmount);
@@ -104,8 +103,9 @@ contract LntVaultERC721 is LntVaultBase, ERC721Holder {
 
   /* ========== RESTRICTED FUNCTIONS ========== */
 
-  function initialize(address _lntMarketRouter, address _VT, uint256 _vestingTokenAmountPerNft, uint256 _vestingStartTime, uint256 _vestingDuration) external nonReentrant initializer onlyOwner {
-    __LntVaultBase_init(_lntMarketRouter, _VT);
+  function initialize(address _NFT, address _lntMarketRouter, address _VT, uint256 _vestingTokenAmountPerNft, uint256 _vestingStartTime, uint256 _vestingDuration) external nonReentrant initializer onlyOwner {
+    __LntVaultBase_init(_NFT, _lntMarketRouter, _VT);
+    require(NFTType == Constants.NftType.ERC721, "Invalid NFT");
 
     require(_vestingTokenAmountPerNft > 0 && _vestingStartTime > 0 && _vestingDuration > 0, "Invalid parameters");
     vestingTokenAmountPerNft = _vestingTokenAmountPerNft;

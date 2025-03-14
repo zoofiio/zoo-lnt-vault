@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/utils/Context.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
+import "../interfaces/ILntContractFactory.sol";
 import "../interfaces/ILntYieldsVault.sol";
 import "../interfaces/IYieldToken.sol";
 import "../interfaces/IYTSwap.sol";
@@ -17,6 +18,7 @@ contract YTSwap is Context, ReentrancyGuard, IYTSwap {
 
   bool public initialized;
 
+  address public immutable factory;
   address public immutable vault;
 
   address public YT;
@@ -30,14 +32,12 @@ contract YTSwap is Context, ReentrancyGuard, IYTSwap {
   uint256 public X;
   uint256 public k0;
 
-  constructor(
-    address _vault
-  )  {
+  constructor(address _vault)  {
     require(_vault != address(0), "Zero address detected");
-
     vault = _vault;
-  }
 
+    factory = _msgSender();
+  }
 
   /* ========== MUTATIVE FUNCTIONS ========== */
 
@@ -54,7 +54,7 @@ contract YTSwap is Context, ReentrancyGuard, IYTSwap {
 
     uint256 fees = paymentTokenAmount * ILntYieldsVault(vault).paramValue("f2") / (10 ** ILntYieldsVault(vault).settingDecimals());
     if (fees > 0) {
-      TokensHelper.transferTokens(ytSwapPaymentToken, address(this), ILntYieldsVault(vault).treasury(), fees);
+      TokensHelper.transferTokens(ytSwapPaymentToken, address(this), ILntContractFactory(factory).treasury(), fees);
     }
     uint256 netAmount = paymentTokenAmount - fees;
 

@@ -22,8 +22,10 @@ abstract contract LntVaultBase is ILntVault, ReentrancyGuard, VaultSettings, Own
   bool public initialized;
   bool public initializedT;
 
-  address public immutable NFT;
-  Constants.NftType public immutable NFTType;
+  address public immutable factory;
+
+  address public NFT;
+  Constants.NftType public NFTType;
   address public VT;
   address public T;
   address public lntMarketRouter;
@@ -32,14 +34,8 @@ abstract contract LntVaultBase is ILntVault, ReentrancyGuard, VaultSettings, Own
   mapping(uint256 => DepositInfo) internal _depositsInfo;
   mapping(address => EnumerableSet.UintSet) internal _userDeposits;
 
-  constructor(
-    address _owner, address _treasury, address _nft
-  ) Ownable(_owner) VaultSettings(_treasury) {
-    require(_nft != address(0), "Zero address detected");
-
-    NFT = _nft;
-    NFTType = NftTypeChecker.getNftType(_nft);
-    require(NFTType != Constants.NftType.UNKNOWN, "Invalid NFT");
+  constructor(address _owner) Ownable(_owner) {
+    factory = _msgSender();
   }
 
   receive() external payable {}
@@ -171,8 +167,12 @@ abstract contract LntVaultBase is ILntVault, ReentrancyGuard, VaultSettings, Own
 
   /* ========== RESTRICTED FUNCTIONS ========== */
 
-  function __LntVaultBase_init(address _lntMarketRouter, address _VT) internal onlyOwner {
-    require(_lntMarketRouter != address(0) && _VT != address(0), "Zero address detected");
+  function __LntVaultBase_init(address _NFT, address _lntMarketRouter, address _VT) internal onlyOwner {
+    require(_NFT != address(0) && _lntMarketRouter != address(0) && _VT != address(0), "Zero address detected");
+
+    NFT = _NFT;
+    NFTType = NftTypeChecker.getNftType(_NFT);
+    require(NFTType != Constants.NftType.UNKNOWN, "Invalid NFT");
     
     lntMarketRouter = _lntMarketRouter;
     VT = _VT;
@@ -186,10 +186,6 @@ abstract contract LntVaultBase is ILntVault, ReentrancyGuard, VaultSettings, Own
 
     T = _T;
     emit InitializedT(_T);
-  }
-
-  function setTreasury(address newTreasury) external nonReentrant onlyOwner {
-    _setTreasury(newTreasury);
   }
 
   function upsertParamConfig(bytes32 param, uint256 defaultValue, uint256 min, uint256 max) external nonReentrant onlyOwner {

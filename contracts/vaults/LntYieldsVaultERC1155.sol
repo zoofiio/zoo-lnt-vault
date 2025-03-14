@@ -9,6 +9,7 @@ import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
+import "../interfaces/ILntContractFactory.sol";
 import "../interfaces/ILntVault.sol";
 import "../interfaces/IVestingToken.sol";
 import "../libs/Constants.sol";
@@ -23,10 +24,8 @@ contract LntVaultERC1155 is LntYieldsVaultBase, ERC1155Holder {
   EnumerableSet.UintSet internal _tokenIds;
   mapping(uint256 => VestingSchedule) internal _tokenVestingSchedule;
 
-  constructor(
-    address _owner, address _treasury, address _nft
-  ) LntYieldsVaultBase(_owner, _treasury, _nft) {
-    require(NFTType == Constants.NftType.ERC1155, "Invalid NFT");
+  constructor(address _owner) LntYieldsVaultBase(_owner) {
+    
   }
 
   /* ================= VIEWS ================ */
@@ -66,7 +65,7 @@ contract LntVaultERC1155 is LntYieldsVaultBase, ERC1155Holder {
     (fees, vtNetAmount) = _calcFeesAndNetAmount(tokenId, value, paramValue("f1"));
 
     if (fees > 0) {
-      IVestingToken(VT).mint(treasury, fees);
+      IVestingToken(VT).mint(ILntContractFactory(factory).treasury(), fees);
     }
     if (vtNetAmount > 0) {
       IVestingToken(VT).mint(_msgSender(), vtNetAmount);
@@ -114,8 +113,9 @@ contract LntVaultERC1155 is LntYieldsVaultBase, ERC1155Holder {
 
   /* ========== RESTRICTED FUNCTIONS ========== */
 
-  function initialize(address _lntMarketRouter, address _VT, address _nftStakingPool, VestingSchedule[] memory _vestingSchedules_) external nonReentrant initializer onlyOwner {
-    __LntYieldVaultBase_init(_lntMarketRouter, _VT, _nftStakingPool);
+  function initialize(address _NFT, address _lntMarketRouter, address _VT, address _nftStakingPool, VestingSchedule[] memory _vestingSchedules_) external nonReentrant initializer onlyOwner {
+    __LntYieldVaultBase_init(_NFT, _lntMarketRouter, _VT, _nftStakingPool);
+    require(NFTType == Constants.NftType.ERC1155, "Invalid NFT");
 
     require(_vestingSchedules_.length > 0, "Invalid vesting schedules");
     _vestingSchedules = _vestingSchedules_;

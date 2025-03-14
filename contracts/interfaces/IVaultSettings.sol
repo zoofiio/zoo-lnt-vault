@@ -9,13 +9,9 @@ interface IVaultSettings {
     uint256 max;
   }
 
-  event UpdateTreasury(address prevTreasury, address newTreasury);
-
   event UpsertParamConfig(bytes32 indexed name, uint256 defaultValue, uint256 min, uint256 max);
 
   event UpdateParamValue(bytes32 indexed param, uint256 value);
-
-  function treasury() external view returns (address);
 
   function settingDecimals() external view returns (uint256);
 

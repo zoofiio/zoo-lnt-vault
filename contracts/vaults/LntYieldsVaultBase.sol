@@ -22,7 +22,7 @@ abstract contract LntYieldsVaultBase is LntVaultBase, ILntYieldsVault {
 
   mapping(address => uint256) internal _pendingNftStakingRewards;
 
-  constructor(address _owner, address _treasury, address _nft) LntVaultBase(_owner, _treasury, _nft) {
+  constructor(address _owner) LntVaultBase(_owner) {
 
   }
 
@@ -47,8 +47,8 @@ abstract contract LntYieldsVaultBase is LntVaultBase, ILntYieldsVault {
 
   /* ========== RESTRICTED FUNCTIONS ========== */
 
-  function __LntYieldVaultBase_init(address _lntMarketRouter, address _VT, address _nftStakingPool) internal onlyOwner {
-    __LntVaultBase_init(_lntMarketRouter, _VT);
+  function __LntYieldVaultBase_init(address _NFT, address _lntMarketRouter, address _VT, address _nftStakingPool) internal onlyOwner {
+    __LntVaultBase_init(_NFT, _lntMarketRouter, _VT);
     require(_nftStakingPool != address(0), "Zero address detected");
     nftStakingPool = _nftStakingPool;
   }
