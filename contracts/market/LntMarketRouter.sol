@@ -2,7 +2,6 @@
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 import "../interfaces/market/ILntMarketFactory.sol";
 import "../interfaces/market/ILntMarket.sol";
@@ -11,7 +10,7 @@ import "../interfaces/IWETH.sol";
 import "../libs/LntMarketLibrary.sol";
 import "../libs/Constants.sol";
 
-contract LntMarketRouter is ILntMarketRouter, ReentrancyGuard {
+contract LntMarketRouter is ILntMarketRouter {
   address public immutable factory;
   address public immutable WETH;
 
@@ -68,7 +67,7 @@ contract LntMarketRouter is ILntMarketRouter, ReentrancyGuard {
     uint amountBMin,
     address to,
     uint deadline
-  ) external virtual ensure(deadline) nonReentrant returns (uint amountA, uint amountB, uint liquidity) {
+  ) external virtual ensure(deadline) returns (uint amountA, uint amountB, uint liquidity) {
     (amountA, amountB) = _addLiquidity(tokenA, tokenB, amountADesired, amountBDesired, amountAMin, amountBMin);
     address pair = LntMarketLibrary.pairFor(factory, tokenA, tokenB);
     _safeTransferFrom(tokenA, msg.sender, pair, amountA);
@@ -83,7 +82,7 @@ contract LntMarketRouter is ILntMarketRouter, ReentrancyGuard {
     uint amountETHMin,
     address to,
     uint deadline
-  ) external virtual payable ensure(deadline) nonReentrant returns (uint amountToken, uint amountETH, uint liquidity) {
+  ) external virtual payable ensure(deadline) returns (uint amountToken, uint amountETH, uint liquidity) {
     (amountToken, amountETH) = _addLiquidity(
       token,
       WETH,
@@ -110,7 +109,7 @@ contract LntMarketRouter is ILntMarketRouter, ReentrancyGuard {
     uint amountBMin,
     address to,
     uint deadline
-  ) public virtual ensure(deadline) nonReentrant returns (uint amountA, uint amountB) {
+  ) public virtual ensure(deadline) returns (uint amountA, uint amountB) {
     address pair = LntMarketLibrary.pairFor(factory, tokenA, tokenB);
     ILntMarket(pair).transferFrom(msg.sender, pair, liquidity); // send liquidity to pair
     (uint amount0, uint amount1) = ILntMarket(pair).burn(to);
@@ -127,7 +126,7 @@ contract LntMarketRouter is ILntMarketRouter, ReentrancyGuard {
     uint amountETHMin,
     address to,
     uint deadline
-  ) public virtual ensure(deadline) nonReentrant returns (uint amountToken, uint amountETH) {
+  ) public virtual ensure(deadline) returns (uint amountToken, uint amountETH) {
     (amountToken, amountETH) = removeLiquidity(
       token,
       WETH,
@@ -194,7 +193,7 @@ contract LntMarketRouter is ILntMarketRouter, ReentrancyGuard {
     address[] calldata path,
     address to,
     uint deadline
-  ) external virtual ensure(deadline) nonReentrant returns (uint[] memory amounts) {
+  ) external virtual ensure(deadline) returns (uint[] memory amounts) {
     amounts = LntMarketLibrary.getAmountsOut(factory, amountIn, path);
     require(amounts[amounts.length - 1] >= amountOutMin, 'LntMarketRouter: INSUFFICIENT_OUTPUT_AMOUNT');
     _safeTransferFrom(
@@ -209,7 +208,7 @@ contract LntMarketRouter is ILntMarketRouter, ReentrancyGuard {
     address[] calldata path,
     address to,
     uint deadline
-  ) external virtual ensure(deadline) nonReentrant returns (uint[] memory amounts) {
+  ) external virtual ensure(deadline) returns (uint[] memory amounts) {
     amounts = LntMarketLibrary.getAmountsIn(factory, amountOut, path);
     require(amounts[0] <= amountInMax, 'LntMarketRouter: EXCESSIVE_INPUT_AMOUNT');
     _safeTransferFrom(
@@ -223,7 +222,6 @@ contract LntMarketRouter is ILntMarketRouter, ReentrancyGuard {
     virtual
     payable
     ensure(deadline)
-    nonReentrant
     returns (uint[] memory amounts)
   {
     require(path[0] == WETH, 'LntMarketRouter: INVALID_PATH');
@@ -238,7 +236,6 @@ contract LntMarketRouter is ILntMarketRouter, ReentrancyGuard {
     external
     virtual
     ensure(deadline)
-    nonReentrant
     returns (uint[] memory amounts)
   {
     require(path[path.length - 1] == WETH, 'LntMarketRouter: INVALID_PATH');
@@ -256,7 +253,6 @@ contract LntMarketRouter is ILntMarketRouter, ReentrancyGuard {
     external
     virtual
     ensure(deadline)
-    nonReentrant
     returns (uint[] memory amounts)
   {
     require(path[path.length - 1] == WETH, 'LntMarketRouter: INVALID_PATH');
@@ -275,7 +271,6 @@ contract LntMarketRouter is ILntMarketRouter, ReentrancyGuard {
     virtual
     payable
     ensure(deadline)
-    nonReentrant
     returns (uint[] memory amounts)
   {
     require(path[0] == WETH, 'LntMarketRouter: INVALID_PATH');
@@ -315,7 +310,7 @@ contract LntMarketRouter is ILntMarketRouter, ReentrancyGuard {
     address[] calldata path,
     address to,
     uint deadline
-  ) external virtual ensure(deadline) nonReentrant {
+  ) external virtual ensure(deadline) {
     _safeTransferFrom(
       path[0], msg.sender, LntMarketLibrary.pairFor(factory, path[0], path[1]), amountIn
     );
@@ -332,7 +327,7 @@ contract LntMarketRouter is ILntMarketRouter, ReentrancyGuard {
     address[] calldata path,
     address to,
     uint deadline
-  ) external virtual payable ensure(deadline) nonReentrant {
+  ) external virtual payable ensure(deadline) {
     require(path[0] == WETH, 'LntMarketRouter: INVALID_PATH');
     uint amountIn = msg.value;
     IWETH(WETH).deposit{value: amountIn}();
@@ -351,7 +346,7 @@ contract LntMarketRouter is ILntMarketRouter, ReentrancyGuard {
     address[] calldata path,
     address to,
     uint deadline
-  ) external virtual ensure(deadline) nonReentrant {
+  ) external virtual ensure(deadline) {
     require(path[path.length - 1] == WETH, 'LntMarketRouter: INVALID_PATH');
     _safeTransferFrom(
       path[0], msg.sender, LntMarketLibrary.pairFor(factory, path[0], path[1]), amountIn

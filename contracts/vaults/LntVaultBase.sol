@@ -111,8 +111,8 @@ abstract contract LntVaultBase is ILntVault, ReentrancyGuard, VaultSettings, Own
     emit RedeemT(_msgSender(), amount);
   }
 
-  function buyback(uint256 amount) external nonReentrant onlyOwner onlyInitialized onlyInitializedT noneZeroAmount(amount) {
-    require(TokensHelper.balance(address(this), T) >= amount, "Insufficient token balance");
+  function buyback(uint256 amountT, uint256 amountVTMin) external nonReentrant onlyOwner onlyInitialized onlyInitializedT noneZeroAmount(amountT) {
+    require(TokensHelper.balance(address(this), T) >= amountT, "Insufficient token balance");
     uint256 prevBalanceVT = IERC20(VT).balanceOf(address(this));
     
     // Create a simple path array: [T, VT]
@@ -126,8 +126,9 @@ abstract contract LntVaultBase is ILntVault, ReentrancyGuard, VaultSettings, Own
     // Handle based on token type
     if (T == Constants.NATIVE_TOKEN) {
       // For native token (ETH), use swapExactETHForTokens
-      ILntMarketRouter(lntMarketRouter).swapExactETHForTokensSupportingFeeOnTransferTokens{value: amount}(
-        0, // Accept any amount of VT (we're not concerned with slippage in buyback)
+      path[0] = ILntMarketRouter(lntMarketRouter).WETH();
+      ILntMarketRouter(lntMarketRouter).swapExactETHForTokens{value: amountT}(
+        amountVTMin,
         path,
         address(this), // Send VT tokens to this vault
         deadline
@@ -135,12 +136,12 @@ abstract contract LntVaultBase is ILntVault, ReentrancyGuard, VaultSettings, Own
     } else {
       // For ERC20 tokens
       // Approve the router to spend tokens
-      IERC20(T).approve(address(lntMarketRouter), amount);
+      IERC20(T).approve(address(lntMarketRouter), amountT);
       
       // Perform the swap
-      ILntMarketRouter(lntMarketRouter).swapExactTokensForTokensSupportingFeeOnTransferTokens(
-        amount,
-        0, // Accept any amount of VT (we're not concerned with slippage in buyback)
+      ILntMarketRouter(lntMarketRouter).swapExactTokensForTokens(
+        amountT,
+        amountVTMin,
         path,
         address(this), // Send VT tokens to this vault
         deadline
@@ -153,7 +154,7 @@ abstract contract LntVaultBase is ILntVault, ReentrancyGuard, VaultSettings, Own
       IVestingToken(VT).burn(address(this), vtReceived);
     }
     
-    emit Buyback(msg.sender, amount, vtReceived);
+    emit Buyback(_msgSender(), amountT, vtReceived);
   }
 
   /* ========== INTERNAL FUNCTIONS ========== */
