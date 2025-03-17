@@ -63,26 +63,19 @@ abstract contract LntVaultBase is ILntVault, ReentrancyGuard, VaultSettings, Own
 
   /* ========== MUTATIVE FUNCTIONS ========== */
 
+  function batchDeposit(uint256[] calldata tokenIds, uint256[] calldata values) external nonReentrant onlyInitialized returns (uint256[] memory) {
+    require(tokenIds.length > 0 && tokenIds.length == values.length, "Invalid input");
+
+    uint256[] memory depositIds = new uint256[](tokenIds.length);
+    for (uint256 i = 0; i < tokenIds.length; i++) {
+      depositIds[i] = _depositToken(tokenIds[i], values[i]);
+    }
+
+    return depositIds;
+  }
+
   function deposit(uint256 tokenId, uint256 value) external nonReentrant onlyInitialized returns (uint256) {
-    require(value > 0, "Invalid value");
-
-    _currentDepositId++;
-    _depositsInfo[_currentDepositId] = DepositInfo({
-      depositId: _currentDepositId,
-      user: _msgSender(),
-      tokenId: tokenId,
-      value: value,
-      depositTime: block.timestamp,
-      redeemed: false,
-      f1OnDeposit : paramValue("f1")
-    });
-    _userDeposits[_msgSender()].add(_currentDepositId);
-
-    _deposit(tokenId, value);
-
-    emit Deposit(_currentDepositId, _msgSender(), NFT, tokenId, value);
-
-    return _currentDepositId;
+    return _depositToken(tokenId, value);
   }
 
   function redeem(uint256 depositId, uint256 tokenId, uint256 value) external nonReentrant onlyInitialized {
@@ -158,6 +151,28 @@ abstract contract LntVaultBase is ILntVault, ReentrancyGuard, VaultSettings, Own
   }
 
   /* ========== INTERNAL FUNCTIONS ========== */
+
+  function _depositToken(uint256 tokenId, uint256 value) internal returns (uint256) {
+    require(value > 0, "Invalid value");
+
+    _currentDepositId++;
+    _depositsInfo[_currentDepositId] = DepositInfo({
+      depositId: _currentDepositId,
+      user: _msgSender(),
+      tokenId: tokenId,
+      value: value,
+      depositTime: block.timestamp,
+      redeemed: false,
+      f1OnDeposit : paramValue("f1")
+    });
+    _userDeposits[_msgSender()].add(_currentDepositId);
+
+    _deposit(tokenId, value);
+
+    emit Deposit(_currentDepositId, _msgSender(), NFT, tokenId, value);
+
+    return _currentDepositId;
+  }
 
   function _deposit(uint256 tokenId, uint256 value) internal virtual;
 
