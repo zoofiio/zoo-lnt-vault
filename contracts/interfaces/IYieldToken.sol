@@ -9,7 +9,7 @@ interface IYieldToken is IERC20 {
 
   event RewardsAdded(address indexed rewardToken, uint256 amount, bool isTimeWeighted);
 
-  event RewardPaid(address indexed user, address indexed rewardToken, uint256 amount, bool isTimeWeighted);
+  event RewardsPaid(address indexed user, address indexed rewardToken, uint256 amount, bool isTimeWeighted);
   
   event TimeWeightedBalanceAdded(address indexed user, uint256 amount);
 

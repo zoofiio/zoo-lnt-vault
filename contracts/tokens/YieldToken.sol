@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.20;
 
+// import "hardhat/console.sol";
+
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
@@ -61,7 +63,7 @@ contract YieldToken is IYieldToken, ERC20, ReentrancyGuard {
     
     return balanceOf(user).mulDiv(
       rewardsPerToken[rewardToken] - userRewardsPerTokenPaid[user][rewardToken],
-      1e36
+      1e36, Math.Rounding.Floor
     ) + userRewards[user][rewardToken];
   }
 
@@ -87,7 +89,7 @@ contract YieldToken is IYieldToken, ERC20, ReentrancyGuard {
     
     return _timeWeightedBalances[user].mulDiv(
       timeWeightedRewardsPerToken[rewardToken] - userTimeWeightedRewardsPerTokenPaid[user][rewardToken],
-      1e36
+      1e36, Math.Rounding.Floor
     ) + userTimeWeightedRewards[user][rewardToken];
   }
 
@@ -127,7 +129,7 @@ contract YieldToken is IYieldToken, ERC20, ReentrancyGuard {
     require(!excludedFromRewards(_msgSender()), "Address excluded from rewards");
     
     _updateRewards(_msgSender());
-    _collectTimeWeightedBalance(_msgSender());
+    // _collectTimeWeightedBalance(_msgSender());
     _updateTimeWeightedRewards(_msgSender());
     
     _claimRewardsForUser(_msgSender());
@@ -165,7 +167,8 @@ contract YieldToken is IYieldToken, ERC20, ReentrancyGuard {
       TokensHelper.transferTokens(rewardToken, _msgSender(), address(this), amount);
     }
     
-    rewardsPerToken[rewardToken] = rewardsPerToken[rewardToken] + amount.mulDiv(1e36, supply);
+    rewardsPerToken[rewardToken] = rewardsPerToken[rewardToken] + amount.mulDiv(1e36, supply, Math.Rounding.Floor);
+    // console.log("addRewards, rewardsPerToken: %s",  rewardsPerToken[rewardToken]);
     
     emit RewardsAdded(rewardToken, amount, false);
   }
@@ -190,7 +193,8 @@ contract YieldToken is IYieldToken, ERC20, ReentrancyGuard {
       TokensHelper.transferTokens(rewardToken, _msgSender(), address(this), amount);
     }
     
-    timeWeightedRewardsPerToken[rewardToken] = timeWeightedRewardsPerToken[rewardToken] + amount.mulDiv(1e36, supply);
+    timeWeightedRewardsPerToken[rewardToken] = timeWeightedRewardsPerToken[rewardToken] + amount.mulDiv(1e36, supply, Math.Rounding.Floor);
+    // console.log("addTimeWeightedRewards, timeWeightedRewardsPerToken: %s",  timeWeightedRewardsPerToken[rewardToken]);
     
     emit RewardsAdded(rewardToken, amount, true);
   }
@@ -199,26 +203,19 @@ contract YieldToken is IYieldToken, ERC20, ReentrancyGuard {
 
   // Automatically settle rewards for both users during transfers
   function _update(address from, address to, uint256 value) internal override {
-    bool fromExcluded = excludedFromRewards(from);
-    bool toExcluded = excludedFromRewards(to);
-
-    if (from != address(0)) {
-      require(to != vault, "Cannot transfer to vault");
-    }
-    
-    if (from != address(0) && !fromExcluded) {
+    if (from != address(0) && !excludedFromRewards(from)) {
       _updateRewards(from);
       _collectTimeWeightedBalance(from);
-      _updateTimeWeightedRewards(from);
+      // _updateTimeWeightedRewards(from);
       
       // Auto-claim rewards for sender
       _claimRewardsForUser(from);
     }
     
-    if (to != address(0) && !toExcluded) {
+    if (to != address(0) && !excludedFromRewards(to)) {
       _updateRewards(to);
       _collectTimeWeightedBalance(to);
-      _updateTimeWeightedRewards(to);
+      // _updateTimeWeightedRewards(to);
       
       // Auto-claim rewards for receiver
       _claimRewardsForUser(to);
@@ -236,7 +233,7 @@ contract YieldToken is IYieldToken, ERC20, ReentrancyGuard {
       if (reward > 0) {
         userRewards[user][rewardToken] = 0;
         TokensHelper.transferTokens(rewardToken, address(this), user, reward);
-        emit RewardPaid(user, rewardToken, reward, false);
+        emit RewardsPaid(user, rewardToken, reward, false);
       }
     }
     
@@ -245,9 +242,10 @@ contract YieldToken is IYieldToken, ERC20, ReentrancyGuard {
       address rewardToken = _timeWeightedRewardsTokens.at(i);
       uint256 reward = userTimeWeightedRewards[user][rewardToken];
       if (reward > 0) {
+        // console.log("_claimRewardsForUser, user: %s, rewards: %s", user, reward);
         userTimeWeightedRewards[user][rewardToken] = 0;
         TokensHelper.transferTokens(rewardToken, address(this), user, reward);
-        emit RewardPaid(user, rewardToken, reward, true);
+        emit RewardsPaid(user, rewardToken, reward, true);
       }
     }
   }
@@ -273,6 +271,8 @@ contract YieldToken is IYieldToken, ERC20, ReentrancyGuard {
       address rewardToken = _timeWeightedRewardsTokens.at(i);
       userTimeWeightedRewards[user][rewardToken] = timeWeightedEarned(user, rewardToken);
       userTimeWeightedRewardsPerTokenPaid[user][rewardToken] = timeWeightedRewardsPerToken[rewardToken];
+
+      // console.log("_updateTimeWeightedRewards, user: %s, userTimeWeightedRewards: %s, userTimeWeightedRewardsPerTokenPaid: %s", user, userTimeWeightedRewards[user][rewardToken], userTimeWeightedRewardsPerTokenPaid[user][rewardToken]);
     }
   }
 
@@ -283,6 +283,8 @@ contract YieldToken is IYieldToken, ERC20, ReentrancyGuard {
     (uint256 collectTimestamp, uint256 deltaTimeWeightedAmount) = collectableTimeWeightedBalance(user);
     
     if (deltaTimeWeightedAmount > 0) {
+      _updateTimeWeightedRewards(user);
+
       _totalTimeWeightedBalance += deltaTimeWeightedAmount;
       _timeWeightedBalances[user] += deltaTimeWeightedAmount;
       

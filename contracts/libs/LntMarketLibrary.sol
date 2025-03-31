@@ -20,7 +20,7 @@ library LntMarketLibrary {
       hex'ff',
       factory,
       keccak256(abi.encodePacked(token0, token1)),
-      hex'fd3d47895c5af813fadc4ef5fe8b62812efb3f7d525369d0a2c687b9dd55b948' // init code hash
+      hex'7a45b909a553d1057b74c5874790edd573c0cc213626069cebf0b7cec6d48fbc' // init code hash
     )))));
   }
 
