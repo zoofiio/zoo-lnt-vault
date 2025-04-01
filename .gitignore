@@ -1,23 +1,15 @@
-node_modules
-.idea
+# Compiler files
+cache/
+out/
 
-# Hardhat files
-cache
-artifacts
+# Ignores development (and goerli) broadcast logs
+/broadcast
+/broadcast/*/31337/
+/broadcast/*/5/
+/broadcast/**/dry-run/
 
-node_modules
+# Dotenv file
 .env
-coverage
-coverage.json
-typechain
-typechain-types
 
-# Hardhat files
-cache
-artifacts
-
-.openzeppelin
-
-# Forge files
-out
-forge-cache
+# Node modules
+node_modules/
