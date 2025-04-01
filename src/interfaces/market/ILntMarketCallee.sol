@@ -2,5 +2,5 @@
 pragma solidity ^0.8.24;
 
 interface ILntMarketCallee {
-  function lntMarketCall(address sender, uint amount0, uint amount1, bytes calldata data) external;
+    function lntMarketCall(address sender, uint amount0, uint amount1, bytes calldata data) external;
 }

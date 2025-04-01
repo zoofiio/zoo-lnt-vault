@@ -1,37 +1,37 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.24;
 
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
-import "../interfaces/IVestingToken.sol";
+import {IVestingToken} from "../interfaces/IVestingToken.sol";
 
 contract VestingToken is IVestingToken, ERC20, ReentrancyGuard {
 
-  address public immutable vault;
+    address public immutable vault;
 
-  constructor(
-    address _vault, string memory _name, string memory _symbol
-  ) ERC20(_name, _symbol) {
-    require(_vault != address(0), "Zero address detected");
+    constructor(
+        address _vault, string memory _name, string memory _symbol
+    ) ERC20(_name, _symbol) {
+        require(_vault != address(0), "Zero address detected");
 
-    vault = _vault;
-  }
+        vault = _vault;
+    }
 
-  /* ========== RESTRICTED FUNCTIONS ========== */
+    /* ========== RESTRICTED FUNCTIONS ========== */
 
-  function mint(address to, uint256 amount) public nonReentrant onlyVault {
-    _mint(to, amount);
-  }
+    function mint(address to, uint256 amount) public nonReentrant onlyVault {
+        _mint(to, amount);
+    }
 
-  function burn(address account, uint256 amount) public nonReentrant onlyVault {
-    _burn(account, amount);
-  }
+    function burn(address account, uint256 amount) public nonReentrant onlyVault {
+        _burn(account, amount);
+    }
 
-  /* ============== MODIFIERS =============== */
+    /* ============== MODIFIERS =============== */
 
-  modifier onlyVault() {
-    require(vault == _msgSender(), "Caller is not Vault");
-    _;
-  }
+    modifier onlyVault() {
+        require(vault == _msgSender(), "Caller is not Vault");
+        _;
+    }
 }
