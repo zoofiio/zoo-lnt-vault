@@ -8,7 +8,7 @@ import {ILntMarketFactory} from "../interfaces/market/ILntMarketFactory.sol";
 library LntMarketLibrary {
     // init code hash for the LntMarket contract
     // can be obtained by running: forge script script/GetInitCodeHash.s.sol --rpc-url localhost
-    bytes32 internal constant INIT_CODE_HASH = 0x7a45b909a553d1057b74c5874790edd573c0cc213626069cebf0b7cec6d48fbc;
+    bytes32 internal constant INIT_CODE_HASH = 0x9417279ef808857557d612e6821c537928860eb2834bfeb4ac5aaf90a7119b69;
 
     // returns sorted token addresses, used to handle return values from pairs sorted in this order
     function sortTokens(address tokenA, address tokenB) internal pure returns (address token0, address token1) {
