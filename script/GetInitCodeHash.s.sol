@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.24;
 
-import "forge-std/Script.sol";
-import "../src/market/LntMarket.sol";
+import {Script} from "forge-std/Script.sol";
+import {console} from "forge-std/console.sol";
+import {LntMarket} from "../src/market/LntMarket.sol";
 
 contract GetInitCodeHash is Script {
-    function run() public {
+    function run() public pure {
         // Get bytecode of LntMarket
         bytes memory bytecode = type(LntMarket).creationCode;
         

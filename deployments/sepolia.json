@@ -1,63 +1,24 @@
 {
-  "ZooProtocol": {
-    "address": "0x896774931349919B71Ec251CCbA1C6AB1FEb45C4",
-    "args": []
-  },
-  "ProtocolSettings": {
-    "address": "0xD91C388453042a2214Ad085df76A9E08Bc701f23",
+  "LntMarketFactory": {
+    "address": "0x4717749731c45607E7609CC06115FE4052883C3C",
+    "contract": "src/market/LntMarketFactory.sol:LntMarketFactory",
     "args": [
-      "0x896774931349919B71Ec251CCbA1C6AB1FEb45C4",
-      "0xC73ce0c5e473E68058298D9163296BebAC2b729C"
+      
     ]
   },
-  "NftStakingPoolFactory": {
-    "address": "0x8431313579e15f46532D581310D367287628918b",
+  "LntMarketRouter": {
+    "address": "0x9726aEeDabDD59BDeEA84360306f0fadD874F7ea",
+    "contract": "src/market/LntMarketRouter.sol:LntMarketRouter",
     "args": [
-      "0x896774931349919B71Ec251CCbA1C6AB1FEb45C4"
+      "0x4717749731c45607E7609CC06115FE4052883C3C",
+      "0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14"
     ]
   },
-  "YtRewardsPoolFactory": {
-    "address": "0x0f7c5b99988da32f651319759872a88F347ED475",
+  "LntContractFactory": {
+    "address": "0xD3Baf6025975e5fc33dDab5A21B42713aD55Cf09",
+    "contract": "src/LntContractFactory.sol:LntContractFactory",
     "args": [
-      "0x896774931349919B71Ec251CCbA1C6AB1FEb45C4"
-    ]
-  },
-  "VaultCalculator": {
-    "address": "0xeD43325d61bC8edd2Da41f2e04D7fA85D704FCB5",
-    "args": []
-  },
-  "MockERC721": {
-    "address": "0x2020cAB606cF79169A0f3F6Eb3E710326C4a4C1B",
-    "args": [
-      "0x896774931349919B71Ec251CCbA1C6AB1FEb45C4",
-      "Mock ERC721",
-      "MK721"
-    ]
-  },
-  "MockERC20": {
-    "address": "0xa10519209B4F6c8Ec22Fda6733a103D3e24F4C39",
-    "args": [
-      "0x896774931349919B71Ec251CCbA1C6AB1FEb45C4",
-      "Mock ERC20",
-      "MK20",
-      18
-    ]
-  },
-  "Query": {
-    "address": "0x31C410AEF663FEbDD7A2F1cCF0a4487CDcD56fdA",
-    "args": []
-  },
-  "MK721_Vault": {
-    "address": "0xEF14D1D8128f496f798f6721713D41070F17A727",
-    "args": [
-      "0x896774931349919B71Ec251CCbA1C6AB1FEb45C4",
-      "0xD91C388453042a2214Ad085df76A9E08Bc701f23",
-      "0x8431313579e15f46532D581310D367287628918b",
-      "0x0f7c5b99988da32f651319759872a88F347ED475",
-      "0x2020cAB606cF79169A0f3F6Eb3E710326C4a4C1B",
-      "0xa10519209B4F6c8Ec22Fda6733a103D3e24F4C39",
-      "Zoo vToken",
-      "VT"
+      "0x1266f008ca136e000540b85469E60cDc4eBAFaCa"
     ]
   }
 }

@@ -77,13 +77,18 @@ forge script script/GetInitCodeHash.s.sol --rpc-url localhost
 To deploy contracts to a local network:
 
 ```bash
-forge script script/DeployContracts.s.sol --rpc-url localhost --broadcast
+forge script script/DeployContracts.s.sol --rpc-url sepolia --broadcast
 ```
 
 To deploy with mock contracts (for testing):
 
 ```bash
-forge script script/DeployContracts.s.sol:DeployWithMocksScript --rpc-url localhost --broadcast
+# Load environment variables from .env
+source .env
+
+# Deploy to specific network (e.g., Arbitrum)
+export NETWORK=sepolia
+forge script script/DeployContracts.s.sol --rpc-url sepolia --broadcast --verify
 ```
 
 For deployment to a real network, set the environment variables:
