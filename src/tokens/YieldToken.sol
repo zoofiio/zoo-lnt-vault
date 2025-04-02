@@ -207,7 +207,7 @@ contract YieldToken is IYieldToken, ERC20, ReentrancyGuard {
         if (from != address(0) && !excludedFromRewards(from)) {
             _updateRewards(from);
             _collectTimeWeightedBalance(from);
-            // _updateTimeWeightedRewards(from);
+            _updateTimeWeightedRewards(from);
             
             // Auto-claim rewards for sender
             _claimRewardsForUser(from);
@@ -216,7 +216,7 @@ contract YieldToken is IYieldToken, ERC20, ReentrancyGuard {
         if (to != address(0) && !excludedFromRewards(to)) {
             _updateRewards(to);
             _collectTimeWeightedBalance(to);
-            // _updateTimeWeightedRewards(to);
+            _updateTimeWeightedRewards(to);
             
             // Auto-claim rewards for receiver
             _claimRewardsForUser(to);
